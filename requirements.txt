@@ -1,0 +1,17 @@
+torch == 2.1.0
+torchviz
+transformers
+datasets
+accelerate
+peft
+sacrebleu
+sqlitedict
+scikit-learn
+omegaconf
+pycountry
+rouge_score
+pytablewriter
+sentencepiece
+einops
+pulp
+loguru
