@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
-import math
 import json
 from datetime import datetime
 from loguru import logger
+import numpy as np
+import os
+from datetime import datetime
 #from eetq.modules.qlinear import EetqLinear
 
 layer_list = ['q','k','v','qkv','o','out','dense','fc1','fc2','up','gate','down']
@@ -186,8 +188,18 @@ def processing_arguments(args):
     if args.load_fisher:
         model_name = args.model.split('/')[-1]
         try:
-            with open(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/fisher_data.json') as f:
-                meta['fisher'] = json.load(f)
+            data = []
+            fisher_file = find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}','fisher_data')
+            logger.info(f"Loading fisher data from {fisher_file}")
+            # with open(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/fisher_data_test.json') as f:
+            with open(fisher_file) as f:
+                json_data = json.load(f)
+                # 遍历字典中的值并平铺
+                for index, block in enumerate(json_data):
+                    for key, value in json_data[block].items():
+                        for k, v in value.items():
+                            data.append(v)
+            meta['fisher'] = np.array(data)
         except:
             meta['fisher'] = None
     else:
@@ -201,6 +213,30 @@ def get_current_time() -> str:
     current_time = datetime.now()
     return current_time.strftime("%Y-%m-%d-%H-%M-%S")
 
+def find_latest_file_by_keyword(folder_path, keyword):
+    # 获取文件夹中所有包含关键词的文件
+    files = [
+        os.path.join(folder_path, f) for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f)) and keyword in f
+    ]
+
+    if not files:
+        return None
+
+    def extract_timestamp(filename):
+        try:
+            parts = os.path.basename(filename).split('_')
+            date_time_part = parts[-1].split('.')[0]  # 去掉.json
+            return datetime.strptime(date_time_part, "%Y-%m-%d-%H-%M-%S")
+        except (IndexError, ValueError):
+            return datetime.min
+
+    latest_file = max(files, key=extract_timestamp)
+
+    if extract_timestamp(latest_file) == datetime.min:
+        return None
+    else:
+        return latest_file
 
 def save_data(data, filename):
     """

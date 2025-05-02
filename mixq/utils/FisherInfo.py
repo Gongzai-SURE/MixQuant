@@ -27,6 +27,8 @@ def Quantization_perturbation(bit, layer):
     original_weight = layer.weight.data.clone().to(torch.float)
     W_quant,_ = mixq_linear.fasterquant(quantbit = bit, groupsize=128)
     perturbation = W_quant - original_weight
+    del original_weight, W_quant
+    torch.cuda.empty_cache()
     return perturbation
 
 def create_position_ids(length: int, device: str = "cpu") -> torch.Tensor:
@@ -47,7 +49,237 @@ def create_attention_mask(length: int, device: str = "cpu") -> torch.Tensor:
     
     return attention_mask
 
-# 计算fisher信息矩阵7 (梯度传递采用全模型传递方式,添加扰动方式为逐层添加，增加前后梯度变化，扰动数据生成方式为真实量化扰动)
+# 计算fisher信息矩阵7 (梯度传递采用全模型传递方式,添加扰动方式为“组件层”添加，扰动数据生成方式为真实量化扰动)
+def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, args):
+    num_gpus = torch.cuda.device_count()
+    meta = args.meta
+    model_parts = split_model_across_gpus(model, meta, num_gpus)
+    # model.to(args.device)
+    layer_batch = 1
+    # 初始化各个目标参数
+    est_fisher_info = {}
+    original_fisher = {}
+    modified_fisher = {}
+    original_perplexitys = []
+    modified_perplexitys = {}
+    batch_num = dataset[0][0].size()[0] 
+
+    epoch_iterator = tqdm(dataset, desc="Iteration")
+    for model_part in model_parts:
+        model_part.train()
+
+    # 计算原始困惑度以及每一层的fihser information
+    for step, batch in enumerate(epoch_iterator):
+        batch = tuple(t.to('cuda:0') for t in batch)
+        
+        batch_num = batch[0].size()[0]
+
+        for i in range(batch_num):
+            inputs = batch[0][i].unsqueeze(0)
+            inp_kwargs = {
+                "attention_mask": None,
+                "position_ids": create_position_ids(len(batch[0][i])).to(args.device)
+            }
+            # 前向传播
+            outputs = inputs
+            for j, model_part in enumerate(model_parts):
+                if j == 0:  # Embedding layer
+                    device = 'cuda:0'
+                    outputs = model_part(outputs.to(device))
+                elif j == len(model_parts) - 1:  # Post layer
+                    device = f'cuda:{num_gpus - 1}'
+                    outputs = model_part(outputs.to(device))
+                else:  # Transformer layers
+                    device = f'cuda:{(j-1) % num_gpus}'
+                    for item in inp_kwargs:
+                        if inp_kwargs[item] is not None:
+                            inp_kwargs[item] = inp_kwargs[item].to(device)
+                    for layer in model_part:
+                        outputs = layer(outputs.to(device), **inp_kwargs)[0]
+
+            model.lm_head.to(f'cuda:{num_gpus - 1}')
+            logits = model.lm_head(outputs)
+            inputs = inputs.to(f'cuda:{num_gpus - 1}')
+            shift_logits = logits[:, :-1, :].contiguous()
+            shift_labels = inputs[:, 1:]
+
+            # 计算原始困惑度
+            loss_fn = nn.CrossEntropyLoss()
+            perplexity = loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            original_perplexitys.append(perplexity)
+            
+            # 反向传播
+            for model_part in model_parts:
+                model_part.zero_grad()
+            perplexity.backward()
+
+            # 获取初始Fisher info
+            block_number = 0
+            for i, model_part in enumerate(model_parts):
+                if i == 0 or i == len(model_parts) - 1:
+                    continue
+                for seq_layer in model_part:
+                    original_fisher[block_number] = {}
+                    target_layers = find_layers(seq_layer)
+                    for name, param in seq_layer.named_parameters():
+                        layer_name = name.rsplit('.', 1)[0]
+                        if layer_name not in target_layers.keys():
+                            continue
+                        if param.requires_grad:
+                            if param.grad is not None:
+                                if layer_name not in original_fisher[block_number]:
+                                    original_fisher[block_number][layer_name] = torch.sum(param.grad.detach() ** 2).to("cpu")
+                                else:
+                                    original_fisher[block_number][layer_name] += torch.sum(param.grad.detach() ** 2).to("cpu")
+                    block_number += 1
+
+            del outputs, logits, shift_logits, shift_labels, perplexity, inputs
+        torch.cuda.empty_cache()
+        batch = tuple(t.to('cpu') for t in batch)
+
+    # Nomalize original fisher information
+    for block_id,_ in enumerate(original_fisher):
+        for name in original_fisher[block_id].keys():
+            original_fisher[block_id][name] = original_fisher[block_id][name]/(batch_num*len(dataset))
+    
+    # 计算原始困惑度平均值
+    original_perplexity = sum(original_perplexitys)/len(original_perplexitys)
+    print(f"Original_perplexity : {original_perplexity}")
+
+    # 计算每一层添加扰动后的困惑度变化以及对应fisher information
+    test_bits = args.test_bit
+    for bit in test_bits:
+        est_fisher_info[bit] = {}
+        modified_perplexitys[bit] = {}
+        modified_fisher[bit] = {}
+        block_number = 0
+        for i,model_part in enumerate(model_parts):
+            if i == 0 or i == len(model_parts) - 1:
+                continue
+            block_iterator = tqdm(model_part, desc=f"Cuda:{(i-1) % num_gpus} ModelBlock")
+            for step, seq_layer in enumerate(block_iterator):
+            # for seq_layer in model_part:
+                modified_fisher[bit][block_number] = {}
+                modified_perplexitys[bit][block_number] = {}
+                target_layers = find_layers(seq_layer)
+                count_layer = 0
+                delta_thetas = {}
+                param_list = {}
+                # 采用层组件添加扰动的方式，设置层组件规模为layer_batch，即每 layer_batch 层为一组 进行随机扰动的添加
+                for name, param in seq_layer.named_parameters():
+                    layer_name = name.rsplit('.', 1)[0]
+                    if layer_name not in target_layers.keys():
+                        continue
+                    
+                    count_layer += 1
+
+                    # 扰动噪声 δθ，作为模拟量化带来扰动的波动
+                    with torch.no_grad():
+                        delta_theta = Quantization_perturbation(bit, target_layers[layer_name])
+                        # delta_theta = random_data(param,args.perturb_percentage)
+                        param.add_(delta_theta)
+                        delta_thetas[layer_name] = delta_theta
+                        param_list[layer_name] = param
+                    
+                    param.requires_grad = True
+
+                    if count_layer % layer_batch == 0 or count_layer == len(target_layers):
+                        # 计算fisher信息矩阵
+                        for step, batch in enumerate(epoch_iterator):
+                            batch = tuple(t.to('cuda:0') for t in batch)
+
+                            for i in range(batch_num):
+                                inputs = batch[0][i].unsqueeze(0)
+                                inp_kwargs = {
+                                    "attention_mask": None,
+                                    "position_ids": create_position_ids(len(batch[0][i])).to(args.device)
+                                }
+                                # 前向传播
+                                outputs = inputs
+                                for j, model_part in enumerate(model_parts):
+                                    if j == 0:  # Embedding layer
+                                        device = 'cuda:0'
+                                        outputs = model_part(outputs.to(device))
+                                    elif j == len(model_parts) - 1:  # Post layer
+                                        device = f'cuda:{num_gpus - 1}'
+                                        outputs = model_part(outputs.to(device))
+                                    else:  # Transformer layers
+                                        device = f'cuda:{(j-1) % num_gpus}'
+                                        for item in inp_kwargs:
+                                            if inp_kwargs[item] is not None:
+                                                inp_kwargs[item] = inp_kwargs[item].to(device)
+                                        for layer in model_part:
+                                            outputs = layer(outputs.to(device), **inp_kwargs)[0]
+
+                                model.lm_head.to(f'cuda:{num_gpus - 1}')
+                                logits = model.lm_head(outputs)
+                                inputs = inputs.to(f'cuda:{num_gpus - 1}')
+                                shift_logits = logits[:, :-1, :].contiguous()
+                                shift_labels = inputs[:, 1:]
+
+                                # 计算添加扰动后的困惑度大小
+                                loss_fn = nn.CrossEntropyLoss()
+                                loss = loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+
+                                for layer_name in param_list.keys():
+                                    if layer_name not in modified_perplexitys[bit][block_number]:
+                                        modified_perplexitys[bit][block_number][layer_name] = loss.to("cpu")
+                                    else:
+                                        modified_perplexitys[bit][block_number][layer_name] += loss.to("cpu")
+                                # loss = perplexity - original_perplexitys[step]
+
+                                # 反向传播
+                                for model_part in model_parts:
+                                    model_part.zero_grad()
+
+                                loss.backward()
+
+                                # 计算 Fisher 信息矩阵
+                                for layer_name in param_list.keys():
+                                    if param_list[layer_name].grad is not None:
+                                        if layer_name not in modified_fisher[bit][block_number]:
+                                            modified_fisher[bit][block_number][layer_name] = torch.sum(param_list[layer_name].grad.detach() ** 2).to("cpu")
+                                        else:
+                                            modified_fisher[bit][block_number][layer_name] += torch.sum(param_list[layer_name].grad.detach() ** 2).to("cpu")
+
+                                del inputs, outputs, logits, shift_logits, shift_labels
+                                torch.cuda.empty_cache()
+                        # 恢复原始参数
+                        with torch.no_grad():
+                            for key in delta_thetas.keys():
+                                param_list[key].sub_(delta_thetas[key])
+                            # param.sub_(delta_theta)
+                        del delta_theta, delta_thetas, param_list
+                        delta_thetas = {}
+                        param_list = {}
+                        torch.cuda.empty_cache()
+                del target_layers
+                block_number += 1
+
+        # Nomalize modeified fisher information and modified perplexitys
+        
+        for block_id,_ in enumerate(modified_fisher[bit]):
+            for name in modified_fisher[bit][block_id].keys():
+                modified_fisher[bit][block_id][name] = modified_fisher[bit][block_id][name]/(batch_num*len(dataset))
+                modified_perplexitys[bit][block_id][name] = modified_perplexitys[bit][block_id][name]/(batch_num*len(dataset))
+
+        # calculate estimate fisher infomation
+        for block_id, _ in enumerate(modified_fisher[bit]):
+            est_fisher_info[bit][block_id] = {}
+            for name in modified_fisher[bit][block_id].keys():
+                # est_fisher_info[bit][block_id][name] = (modified_fisher[bit][block_id][name] - original_fisher[block_id][name])/ original_fisher[block_id][name]
+                est_fisher_info[bit][block_id][name] = modified_fisher[bit][block_id][name] - original_fisher[block_id][name]
+
+
+    for model_part in model_parts:
+        model_part.to('cpu')
+
+    torch.cuda.empty_cache()
+    
+    return est_fisher_info, modified_perplexitys, original_perplexity
+
+
+# 计算fisher信息矩阵6 (梯度传递采用全模型传递方式,添加扰动方式为逐层添加，增加前后梯度变化，扰动数据生成方式为真实量化扰动)
 def evaluate_fisher_information_with_quant_perturb_sub(model, dataset, args):
     num_gpus = torch.cuda.device_count()
     meta = args.meta
@@ -245,7 +477,8 @@ def evaluate_fisher_information_with_quant_perturb_sub(model, dataset, args):
         for block_id, _ in enumerate(modified_fisher[bit]):
             est_fisher_info[bit][block_id] = {}
             for name in modified_fisher[bit][block_id].keys():
-                est_fisher_info[bit][block_id][name] = (modified_fisher[bit][block_id][name] - original_fisher[block_id][name])/ original_fisher[block_id][name]
+                # est_fisher_info[bit][block_id][name] = (modified_fisher[bit][block_id][name] - original_fisher[block_id][name]) / original_fisher[block_id][name]
+                est_fisher_info[bit][block_id][name] = modified_fisher[bit][block_id][name] - original_fisher[block_id][name]
 
 
     for model_part in model_parts:

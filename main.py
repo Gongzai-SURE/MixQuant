@@ -5,12 +5,14 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from loguru import logger
+from awq import AutoAWQForCausalLM
 
 from mixq.layerwise_quant import *
 from mixq.utils.misc import *
 from mixq.utils.datautils import *
 from mixq.utils.modelutils import *
 from evaluation.perplexity import *
+from evaluation.eval_wikitext import *
 
 if __name__ == '__main__':
     
@@ -27,9 +29,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dataset_dir', type=str, default='/root/autodl-tmp/datasets/',
         help='load datasets from local directory.'
-    )
+    )  
     parser.add_argument(
-        '--nsamples', type=int, default = 2, #128 需要 128 * 32768 * 4096 * 2 * 4 / 1024 / 1024 / 1024 = 32GB
+        '--nsamples', type=int, default = 32,
         help='Number of calibration data samples.'
     )
     parser.add_argument(
@@ -40,15 +42,36 @@ if __name__ == '__main__':
             "random" indicates randomly assigning a quantization strategy.'
     )
     parser.add_argument(
+        '--allocate_strategy', type=str, default='greedy', choices=['greedy', 'genetic', 'rl', 'annealing','bayesian','random'], 
+        help='Bit width allocation strategy based on Fisher'
+    )
+    parser.add_argument(
         '--load_fisher', action='store_true',
         help='Whether to load a FisherInfo txt.'
     )
     parser.add_argument(
-        '--wbits', type=list, default=[3,4,8],
+        '--allocation', type=list, default=None,
+        help='The bit allocation for each layer.'
+    )
+    parser.add_argument(
+        '--wbits', type=list, default=[3,4,5,6,7,8],
         help='The number of bits to use for weight quantization; at least one lower bits.'
     )
     parser.add_argument(
-        '--target_bit', type=float, default=3.8,
+        '--quant_method', type=str, default='gptq', choices=['gptq', 'awq', 'nearest'], 
+        help='Choosing an appropriate quantification method.\
+            Different methods have different processes in handling quantization parameters.'
+    ) 
+    parser.add_argument(
+        '--test_bit', type=list, default=[3],
+        help='The bits to calculate fisher info.'
+    )
+    parser.add_argument(
+        '--alpha', type=float, default=0.01,
+        help='Hyperparameters used to calculate the objective function'
+    )
+    parser.add_argument(
+        '--target_bit', type=float, default=4,
         help='The target bit of total quantization.'
     )
     parser.add_argument(
@@ -88,10 +111,6 @@ if __name__ == '__main__':
         help='Whether to perform symmetric quantization.'
     )
     parser.add_argument(
-        '--nearest', action='store_true',
-        help='Whether to run the round-to-nearest quantization.'
-    ) 
-    parser.add_argument(
         '--groupsize', type=int, default=128,
         help='Groupsize for fine-grained quantization; default uses full row.'
     )
@@ -108,8 +127,8 @@ if __name__ == '__main__':
         help='Logging file name'
     )
     parser.add_argument(
-        '--benchmark', type=int, default=0,
-        help='Number of tokens to use for benchmarking.'
+        '--benchmark', action='store_true',
+        help='Whether to run benchmark.'
     )
     parser.add_argument(
         '--true-sequential', action='store_true',
@@ -147,8 +166,24 @@ if __name__ == '__main__':
     #     args.seqlen = 2048
 
     args.seqlen = 1024
+
+    # benchmark
+    if args.benchmark:
+        ppl_scores = []
+        model = AutoAWQForCausalLM.from_quantized(args.model, fuse_layers=True)
+        tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
+        if not args.no_eval:
+            ppl_tasks = ['wikitext2','ptb']
+            for dataset in ppl_tasks:
+                testloader = get_loaders(
+                    dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False
+                )
+                logger.info(dataset)
+                ppl_score = eval_ppl(model.model, testloader, args.device, args.seqlen, args)
+                ppl_scores.append((dataset,ppl_score))
+        
     
-    if not args.load and args.wbits and not args.nearest and not args.original:
+    if not args.load and args.wbits and not args.original:
         logger.info(f'The model needs quantilization, start loading {args.dataset} as validation data ...')
         dataloader = get_loaders(
             args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True, local_dir=args.dataset_dir
@@ -156,28 +191,12 @@ if __name__ == '__main__':
         logger.info('Validation Data loaded.')
 
         t_start = time.time()
-        quantizers, layer_score = layerwise_quantize(model, dataloader, args)
+        quantizers = layerwise_quantize(model, dataloader, args)
 
         t = round((time.time() - t_start),1)
         logger.info(f"Running Time : {t} s")
     
-    # benchmark
-    if args.benchmark:
-        dataloader = get_loaders(
-            args.dataset, nsamples=1, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True
-        )
-        gpus = [torch.device('cuda:%d' % i) for i in range(torch.cuda.device_count())]
-        if len(gpus) > 1:
-            model_multigpu(model, gpus, args)
-        else:
-            model = model.to(args.device)
-        
-        if isinstance(dataloader,list):
-            input_ids = dataloader[0][0][:,:args.benchmark]
-        else:
-            input_ids = dataloader.input_ids[:, :args.benchmark]
-        benchmark(model, input_ids, args)
-        exit()
+    torch.cuda.empty_cache()
 
     # evaluation
     t1 = time.time()
