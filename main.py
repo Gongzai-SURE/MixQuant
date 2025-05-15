@@ -12,6 +12,7 @@ from mixq.utils.misc import *
 from mixq.utils.datautils import *
 from mixq.utils.modelutils import *
 from evaluation.perplexity import *
+from evaluation.reason import *
 from evaluation.eval_wikitext import *
 
 if __name__ == '__main__':
@@ -23,7 +24,7 @@ if __name__ == '__main__':
         help='hugging face model to load'
     )
     parser.add_argument(
-        '--dataset', type=str,default='ptb',
+        '--dataset', type=str,default='wikitext2',
         help='Where to extract calibration data from. choices = [wikitext2, ptb, c4, custom_path]'
     )
     parser.add_argument(
@@ -54,11 +55,11 @@ if __name__ == '__main__':
         help='The bit allocation for each layer.'
     )
     parser.add_argument(
-        '--wbits', type=list, default=[3,4,5,6,7,8],
+        '--wbits', type=list, default=[3,4,5],
         help='The number of bits to use for weight quantization; at least one lower bits.'
     )
     parser.add_argument(
-        '--quant_method', type=str, default='gptq', choices=['gptq', 'awq', 'nearest'], 
+        '--quant_method', type=str, default='awq', choices=['gptq', 'awq', 'nearest'], 
         help='Choosing an appropriate quantification method.\
             Different methods have different processes in handling quantization parameters.'
     ) 
@@ -145,6 +146,11 @@ if __name__ == '__main__':
         '--quant', action='store_true',
         help='Whether to load a quantilized model.'
     )
+    parser.add_argument(
+        '--version', type=str, default='gemm',
+        help='Awq quantized network architecture.'
+    )
+
     
     args = parser.parse_args()
     meta = processing_arguments(args)
@@ -198,19 +204,29 @@ if __name__ == '__main__':
     
     torch.cuda.empty_cache()
 
-    # evaluation
+    # evaluation plerplexity
     t1 = time.time()
     ppl_scores = []
     if not args.no_eval:
         ppl_tasks = ['wikitext2','ptb']
         for dataset in ppl_tasks:
             testloader = get_loaders(
-                dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False
-            )
+                dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False, local_dir=args.dataset_dir
+            )  
             logger.info(dataset)
             ppl_score = eval_ppl(model, testloader, args.device, args.seqlen, args)
             ppl_scores.append((dataset,ppl_score))
     t2 = time.time() - t1
+    logger.info(f"Evaluation time: {t2:.2f} seconds")
+
+    # evaluation reasoning
+    if not args.no_eval:
+        # reason_tasks = ['BoolQ','ARC-E','ARC-C','HellaSwag','WinoGrande']
+        tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
+        scores = reason_test(model, tokenizer)
+        # 记录平均值
+        logger.info(f"average score: {np.mean(scores)}")
+    
 
     # saving model
     if args.save_path:

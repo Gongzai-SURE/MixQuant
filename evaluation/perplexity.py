@@ -7,12 +7,16 @@ import sys
 sys.path.append('/root/autodl-tmp/methods/')
 from mix_quantize.mixq.quant import *
 from mix_quantize.mixq.utils.misc import *
+import gc
 
 # 计算模型在特定数据集上的困惑度
 @torch.no_grad()
 def eval_ppl(model, dataset, dev, seqlen, args):
     meta = args.meta
     logger.info('Evaluating ...')
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.init()
 
     dataset = dataset.input_ids
     nsamples = dataset.numel() // seqlen
@@ -72,13 +76,13 @@ def eval_ppl(model, dataset, dev, seqlen, args):
     for i in tqdm(range(len(layers))):
         layer = layers[i].to(dev)
         
-        if args.nearest:
-            subset = find_layers(layer)
-            for name in subset:
-                quantizer = Quantizer(args.wbits, perchannel=True, sym=args.sym, mse=False)
-                W = subset[name].weight.data
-                quantizer.find_params(W, weight=True)
-                subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
+        # if args.nearest:
+        #     subset = find_layers(layer)
+        #     for name in subset:
+        #         quantizer = Quantizer(args.bit, perchannel=True, sym=args.sym, mse=False)
+        #         W = subset[name].weight.data
+        #         quantizer.find_params(W, weight=True)
+        #         subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
 
         for j in range(nsamples):
             outs[j] = layer(inps[j].unsqueeze(0), **inp_kwargs)[0]

@@ -4,10 +4,14 @@ from loguru import logger
 from tqdm import tqdm
 import copy
 import random
-from mixq.linear import *
-from mixq.quant import *
-from mixq.utils.misc import *
-from mixq.utils.FisherInfo import *
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from .linear import *
+from .quant import *
+from .awq.quantize.quantizer import *
+from .utils.misc import *
+from .utils.FisherInfo import *
 from .allocate.allocate import *
 
 
@@ -60,12 +64,10 @@ def layerwise_quantize(model, dataloader, args):
         quantize_model_gptq(model, args, quantizers, allocation_res)
     elif args.quant_method == 'awq':
         logger.info('Using awq method to quantize model.')
-        quantize_model_awq(model, args, quantizers, allocation_res)
+        quantize_model_awq(model, args, allocation_res)
     elif args.quant_method == 'nearest':
         logger.info('Using nearest method to quantize model.')
-        # quantize_model_nearest(model, args, quantizers, allocation_res)
-    
-    
+        quantize_model_nearest(model, args)
     return quantizers
 
 def layer_fisher(model, dataloader, args, allocation):
@@ -374,7 +376,7 @@ def quantize_model_gptq(model, args, quantizers, allocation):
         layer_bits[block_index] = block_dict
         
     # 按照layer_bits逐层量化每一层
-    progress_bar = tqdm(range(len(layers)), desc="Quantizing")
+    progress_bar = tqdm(range(len(layers)), desc="Quantizing with gptq")
     for i in progress_bar:
         logger.info(f"Layer {i} quantizing.")
 
@@ -424,7 +426,7 @@ def quantize_model_gptq(model, args, quantizers, allocation):
         torch.cuda.empty_cache()
         progress_bar.set_postfix({"layer": i})
 
-def quantize_model_awq(model, args, quantizers, allocation):
+def quantize_model_awq(model, args, allocation):
     meta = args.meta
     layers, _,_ = parsing_layers(model, meta)
     target_layers = find_layers(layers[0])
@@ -433,60 +435,44 @@ def quantize_model_awq(model, args, quantizers, allocation):
     else:
         sequential = [list(target_layers.keys())]
     layer_bits = {}
+
+    # BACK TO ORIGINAL AWQ
+    # allocation = [4]*len(allocation)
     
     for i in range(0, len(allocation), len(sequential[0])):
         block_index = i // len(sequential[0])
         block_data = allocation[i:i + len(sequential[0])]
         block_dict = {sequential[0][j]: block_data[j] for j in range(len(sequential[0]))}
         layer_bits[block_index] = block_dict
+    
+    awq_quant = AwqQuantizer(model,
+                             layer_bits,
+                             args
+                            )
+    awq_quant.quantize()
+
+def quantize_model_nearest(model,args):
+    meta = args.meta
+    layers, _,_ = parsing_layers(model, meta)
+
+    for i in tqdm(range(len(layers))):
+        layer = layers[i].to(args.device)
+        subset = find_layers(layer)
+        for name in subset:
+            quantizer = Quantizer(args.target_bit, perchannel=True, sym=args.sym, mse=False)
+            # quantizer = args.meta['quantizers'][f"{meta['prefix']}.{i}.{name}"]
+            W = subset[name].weight.data
+            quantizer.find_params(W, weight=True)
+            subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
+
+
+
+    
+
+    
+    
+    
         
-    # 按照layer_bits逐层量化每一层
-    progress_bar = tqdm(range(len(layers)), desc="Quantizing")
-    for i in progress_bar:
-        logger.info(f"Layer {i} quantizing.")
+    
 
-        layers[i].to(args.device)
-        target_layers = find_layers(layers[i])
-        layer_bit = layer_bits[i]
-
-        if args.true_sequential:
-            sequential = meta['sequential']
-        else:
-            sequential = [list(target_layers.keys())]
-        
-        for names in sequential:
-            subset = {n: target_layers[n] for n in names}
-
-            mixq_linear = {}
-            # 初始化 Mix_Linear and quantizer类
-            for name in subset:
-                mixq_linear[name] = Mixq_Linear(subset[name], layer_bit[name])
-                mixq_linear[name].quantizer = Quantizer(
-                    layer_bit[name], perchannel=True, sym=args.sym, mse=(args.tuning == 'mse')
-                )
-            
-            for name in subset:
-                W = subset[name].weight.data.clone().to(torch.float)
-                W_quant = W
-                W_quant,sum_frob_norm_error = mixq_linear[name].fasterquant(quantbit = layer_bit[name], groupsize=args.groupsize)
-                # 修改model对应层的权重为 W_quant
-                subset[name].weight.data = W_quant
-                # 保存量化bit位数    
-                mixq_linear[name].layer.weight.data = W_quant
-                mixq_linear[name].bits = layer_bit[name]
-                mixq_linear[name].free()
-
-                del W
-                del W_quant
-                quantizers[f"{meta['prefix']}.{i}.{name}"] = mixq_linear[name].quantizer
-                mixq_linear[name].free()
-                torch.cuda.empty_cache()
-
-        # 量化后结果计算与资源释放
-        for name in list(target_layers.keys()):
-            quantizers[f"{meta['prefix']}.{i}.{name}"] = quantizers[f"{meta['prefix']}.{i}.{name}"].cpu()
-
-        del mixq_linear
-        layers[i].to('cpu') 
-        torch.cuda.empty_cache()
-        progress_bar.set_postfix({"layer": i})
+    

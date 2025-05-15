@@ -27,6 +27,7 @@ class Mixq_Linear:
         self.bits = wbits
         self.quantizer = None
         self.quant_loss_threshold = None
+        
     
     #定义量化损失阈值计算函数,根据目标层的参数量(正比)，层最大值和最小值，所处块的id（id号越大说明层越深），计算量化损失阈值
     def get_layer_loss_threshold(self,layer,pentalty_index,bit_differ):
@@ -90,7 +91,7 @@ class Mixq_Linear:
 
         torch.cuda.synchronize()
         # 保留两位小数
-        logger.info(f"Quantilization_bits:{quantbit} time :{(time.time() - tick):.2f} layer loss: {torch.sum(Losses).item():.4f}.")
+        # logger.info(f"Quantilization_bits:{quantbit} time :{(time.time() - tick):.2f} layer loss: {torch.sum(Losses).item():.4f}.")
         
         if isinstance(self.layer, transformers.Conv1D):
             Q = Q.t()

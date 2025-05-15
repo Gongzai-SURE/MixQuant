@@ -128,7 +128,7 @@ class AwqQuantizer:
             w = w.weight.data * scales
 
         return w
-
+    
     def quantize(self):
         for i in tqdm(range(len(self.modules)), desc="AWQ"):
             # Move module and inputs to correct device
@@ -162,6 +162,7 @@ class AwqQuantizer:
                 named_linears, self.modules_to_not_convert
             )
 
+            # 记录激活值
             input_feat = self._get_input_feat(self.modules[i], named_linears)
             clear_memory()
 
@@ -177,7 +178,6 @@ class AwqQuantizer:
             scales_list = append_str_prefix(
                 scales_list, get_op_name(self.model, self.modules[i]) + "."
             )
-
             # [STEP 3]: Compute and apply clipping list
             if self.apply_clip:
                 clip_list = self._search_best_clip(
@@ -186,8 +186,7 @@ class AwqQuantizer:
                 apply_clip(self.modules[i], clip_list)
                 clip_list = append_str_prefix(
                     clip_list, get_op_name(self.model, self.modules[i]) + "."
-                )
-
+                )   
             # [STEP 4]: Quantize weights
             if not self.export_compatible:
                 self._apply_quant(self.modules[i], named_linears)
@@ -204,6 +203,46 @@ class AwqQuantizer:
             clear_memory()
 
     def _apply_quant(self, module, named_linears: Dict[str, nn.Linear]):
+        for name, linear_layer in named_linears.items():
+            # NOTE: small regression in perplexity if linear layer uses .cpu().float()
+            linear_layer = linear_layer.to(get_best_device()).half()
+
+            linear_layer.weight.data, scales, zeros = self.pseudo_quantize_tensor(
+                linear_layer.weight.data
+            )
+
+            if self.version == "gemm":
+                scales = scales.t().contiguous()
+                zeros = zeros.t().contiguous()
+                q_linear_module = WQLinear_GEMM
+
+            elif self.version == "gemv":
+                q_linear_module = WQLinear_GEMV
+
+            elif self.version == "marlin":
+                q_linear_module = WQLinear_Marlin
+            
+            elif self.version == "gemv_fast":
+                q_linear_module = WQLinear_GEMVFast
+
+            else:
+                raise ValueError(f"Unknown version {self.version}")
+
+            q_linear = q_linear_module.from_linear(
+                linear=linear_layer,
+                w_bit=self.w_bit,
+                group_size=self.group_size,
+                init_only=False,
+                scales=scales,
+                zeros=zeros,
+            )
+
+            linear_layer.cpu()
+            q_linear.to(next(module.parameters()).device)
+            set_op_by_name(module, name, q_linear)
+            clear_memory()
+
+    def _apply_dequant(self, module, named_linears: Dict[str, nn.Linear]):
         for name, linear_layer in named_linears.items():
             # NOTE: small regression in perplexity if linear layer uses .cpu().float()
             linear_layer = linear_layer.to(get_best_device()).half()

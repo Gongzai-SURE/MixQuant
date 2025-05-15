@@ -19,7 +19,7 @@ seed = random.seed(3)
 model_path = '/root/autodl-tmp/models/llama2-7b'
 quant_path = '/root/autodl-tmp/models/llama2-7b-awq'
 
-def get_wikitext2(nsamples=32, seed=0, seqlen=1024, local_dir="/root/autodl-tmp/datasets/wikitext"):
+def get_wikitext2(nsamples=32, seed=0, seqlen=1024, local_dir="/root/autodl-tmp/datasets/wikitext2"):
     # 加载数据集
     if local_dir is not None:
         dataset = load_from_disk(local_dir)["train"]
@@ -69,7 +69,7 @@ def evaluate_perplexity(model, tokenizer,dev):
         return torch.exp(torch.stack(nlls).sum() / (n_samples * seqlen))
 
     # load and prepare dataset
-    data = load_from_disk("/root/autodl-tmp/datasets/wikitext")["test"]
+    data = load_from_disk("/root/autodl-tmp/datasets/wikitext2")["test"]
     data = tokenizer("\n\n".join(data["text"]), return_tensors="pt")
     data = data.input_ids
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             device_map='cpu'
         )
 
-    quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+    quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "gemm" }
     
     logger.info(f"Quantization config: {quant_config}")
 
@@ -133,18 +133,20 @@ if __name__ == "__main__":
     # ppl = evaluate_perplexity(awq_model.model, tokenizer,dev)
     # logger.info(f"Original model Perplexity: {ppl},using time: {time.time() - start_time:.2f} seconds")
 
-    # train_dataset = get_wikitext2(nsamples=32, seed=0, seqlen=1024, local_dir="/root/autodl-tmp/datasets/wikitext")
+    train_dataset = get_wikitext2(nsamples=32, seed=0, seqlen=1024, local_dir="/root/autodl-tmp/datasets/wikitext2")
     
     # -------------Quantize-----------------------
 
     logger.info("Start quantization ...")
     start_time = time.time()
+
     # awq_model.quantize(tokenizer,
     #            quant_config=quant_config,
     #            calib_data=train_dataset,
-    #         #    n_parallel_calib_samples=1,
+    #            n_parallel_calib_samples=1,
     #            max_calib_samples=128,
-    #            max_calib_seq_len=4000)
+    #            max_calib_seq_len=4000,
+    #            apply_clip=False)
     
 
     awq_quant = AwqQuantizer(awq_model,
@@ -154,8 +156,9 @@ if __name__ == "__main__":
                              quant_config["q_group_size"], 
                              quant_config["zero_point"], 
                              quant_config["version"],
-                             calib_data="wikitext2"
-                             )
+                             calib_data="wikitext2",
+                             apply_clip = False
+                            )
     awq_quant.quantize()
 
     
@@ -166,6 +169,6 @@ if __name__ == "__main__":
     # start_time = time.time()
     # model = AutoAWQForCausalLM.from_quantized(quant_path, fuse_layers=True)
     # logger.info("Start evaluating quantized model ...")
-    # ppl = evaluate_perplexity(awq_model.model, tokenizer,dev)
+    ppl = evaluate_perplexity(awq_model.model, tokenizer,dev)
     # logger.info(f"AWQ quantized model Perplexity: {ppl}, using time: {time.time() - start_time:.2f} seconds")
 

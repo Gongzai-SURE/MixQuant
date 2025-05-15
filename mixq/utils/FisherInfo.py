@@ -7,8 +7,11 @@ from loguru import logger
 import warnings
 from .multi_gpus import *
 from tqdm import tqdm
-from mixq.linear import Mixq_Linear
-from mixq.quant import Quantizer
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from ..linear import Mixq_Linear
+from ..quant import Quantizer
 
 warnings.filterwarnings("ignore", category=UserWarning, message=".*Warning.*")
 
