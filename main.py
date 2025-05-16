@@ -3,9 +3,7 @@ import torch
 import torch.nn as nn
 import argparse
 import numpy as np
-from tqdm import tqdm
 from loguru import logger
-from awq import AutoAWQForCausalLM
 
 from mixq.layerwise_quant import *
 from mixq.utils.misc import *
@@ -20,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/llama2-7b',  #qwen2-1.5b   llama2-7b
+        '--model', type=str,default = '/root/autodl-tmp/models/llama2-7b',  #qwen2-1.5b   llama2-7b llama2-13b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -55,7 +53,7 @@ if __name__ == '__main__':
         help='The bit allocation for each layer.'
     )
     parser.add_argument(
-        '--wbits', type=list, default=[3,4,5],
+        '--wbits', type=list, default=[3,4,5,6],
         help='The number of bits to use for weight quantization; at least one lower bits.'
     )
     parser.add_argument(
@@ -64,7 +62,7 @@ if __name__ == '__main__':
             Different methods have different processes in handling quantization parameters.'
     ) 
     parser.add_argument(
-        '--test_bit', type=list, default=[3],
+        '--test_bit', type=list, default=[4],
         help='The bits to calculate fisher info.'
     )
     parser.add_argument(
@@ -128,10 +126,6 @@ if __name__ == '__main__':
         help='Logging file name'
     )
     parser.add_argument(
-        '--benchmark', action='store_true',
-        help='Whether to run benchmark.'
-    )
-    parser.add_argument(
         '--true-sequential', action='store_true',
         help='Whether to run in true sequential model.'
     )
@@ -151,7 +145,6 @@ if __name__ == '__main__':
         help='Awq quantized network architecture.'
     )
 
-    
     args = parser.parse_args()
     meta = processing_arguments(args)
     args.meta = meta
@@ -164,31 +157,14 @@ if __name__ == '__main__':
         model = get_hfmodel(args.model, args.dtype, args.quant, trust_remote_code=args.trust_remote_code)
     logger.info('Model loaded.')
 
-    # if getattr(model.config, 'max_position_embeddings', None):
-    #     args.seqlen = model.config.max_position_embeddings
-    # elif getattr(model.config, 'max_sequence_length', None):
-    #     args.seqlen = model.config.max_sequence_length
-    # else:
-    #     args.seqlen = 2048
-
-    args.seqlen = 1024
-
-    # benchmark
-    if args.benchmark:
-        ppl_scores = []
-        model = AutoAWQForCausalLM.from_quantized(args.model, fuse_layers=True)
-        tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
-        if not args.no_eval:
-            ppl_tasks = ['wikitext2','ptb']
-            for dataset in ppl_tasks:
-                testloader = get_loaders(
-                    dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False
-                )
-                logger.info(dataset)
-                ppl_score = eval_ppl(model.model, testloader, args.device, args.seqlen, args)
-                ppl_scores.append((dataset,ppl_score))
-        
+    if getattr(model.config, 'max_position_embeddings', None):
+        args.seqlen = model.config.max_position_embeddings
+    elif getattr(model.config, 'max_sequence_length', None):
+        args.seqlen = model.config.max_sequence_length
+    else:
+        args.seqlen = 2048
     
+    # implementation of quantization
     if not args.load and args.wbits and not args.original:
         logger.info(f'The model needs quantilization, start loading {args.dataset} as validation data ...')
         dataloader = get_loaders(
