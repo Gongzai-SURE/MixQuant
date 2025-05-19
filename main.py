@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/llama2-7b',  #qwen2-1.5b   llama2-7b llama2-13b
+        '--model', type=str,default = '/root/autodl-tmp/models/llama2-13b',  #qwen2-1.5b   llama2-7b llama2-13b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -163,12 +163,14 @@ if __name__ == '__main__':
         args.seqlen = model.config.max_sequence_length
     else:
         args.seqlen = 2048
+
+    # args.seqlen = 1024
     
     # implementation of quantization
     if not args.load and args.wbits and not args.original:
         logger.info(f'The model needs quantilization, start loading {args.dataset} as validation data ...')
         dataloader = get_loaders(
-            args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True, local_dir=args.dataset_dir
+            args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, train=True, local_dir=args.dataset_dir
         )
         logger.info('Validation Data loaded.')
 
@@ -181,20 +183,20 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     # evaluation plerplexity
-    t1 = time.time()
-    ppl_scores = []
     if not args.no_eval:
+        ppl_scores = []
         ppl_tasks = ['wikitext2','ptb']
         for dataset in ppl_tasks:
             testloader = get_loaders(
                 dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False, local_dir=args.dataset_dir
             )  
-            logger.info(dataset)
-            ppl_score = eval_ppl(model, testloader, args.device, args.seqlen, args)
+            t1 = time.time()
+            logger.info(f'Evaluating {dataset}')
+            ppl_score = eval_ppl(model, testloader, args.device, args)
+            t2 = time.time() - t1
+            logger.info(f"Evaluation time: {t2:.2f} seconds")
             ppl_scores.append((dataset,ppl_score))
-    t2 = time.time() - t1
-    logger.info(f"Evaluation time: {t2:.2f} seconds")
-
+    
     # evaluation reasoning
     if not args.no_eval:
         # reason_tasks = ['BoolQ','ARC-E','ARC-C','HellaSwag','WinoGrande']

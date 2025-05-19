@@ -3,6 +3,7 @@ This file contains the function to split a model across multiple GPUs.
 '''
 import torch.nn as nn
 from .misc import parsing_layers
+import torch
 
 
 def split_model_across_gpus(model, meta, num_gpus):
@@ -29,3 +30,39 @@ def split_model_across_gpus(model, meta, num_gpus):
     model_parts.extend(post_layers)
 
     return model_parts
+
+
+def model_multigpu(model, gpus, args):
+    import math
+
+    layers, pre_layers, post_layers = parsing_layers(model=model, meta=args.meta)
+    
+    for pre_layer in pre_layers:
+        pre_layer = pre_layer.to(gpus[0])
+    
+    for post_layer in post_layers:
+        post_layer = post_layer.to(gpus[0])
+    
+    model.lm_head = model.lm_head.to(gpus[0])
+
+    class MoveModule(nn.Module):
+        def __init__(self, module):
+            super().__init__()
+            self.module = module
+            self.dev = next(iter(self.module.parameters())).device
+        def forward(self, *inp, **kwargs):
+            inp = list(inp)
+            if inp[0].device != self.dev:
+                inp[0] = inp[0].to(self.dev)
+            for key in args.meta['inp_kwargs']:
+                if kwargs[key] != None and kwargs[key].device != self.dev:
+                    kwargs[key] = kwargs[key].to(self.dev)
+            tmp = self.module(*inp, **kwargs)
+            return tmp
+
+    pergpu = math.ceil(len(layers) / len(gpus))
+    for i in range(len(layers) - 1):
+        layers[i] = MoveModule(layers[i].to(gpus[i // pergpu]))
+    layers[-1] = MoveModule(layers[-1].to(gpus[0]))
+
+    model.gpus = gpus

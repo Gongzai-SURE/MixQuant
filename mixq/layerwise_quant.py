@@ -464,6 +464,8 @@ def quantize_model_nearest(model,args):
             W = subset[name].weight.data
             quantizer.find_params(W, weight=True)
             subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
+        layers[i] = layer.cpu()
+        torch.cuda.empty_cache()
 
 
 

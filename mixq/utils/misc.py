@@ -6,6 +6,7 @@ from loguru import logger
 import numpy as np
 import os
 from datetime import datetime
+
 #from eetq.modules.qlinear import EetqLinear
 
 layer_list = ['q','k','v','qkv','o','out','dense','fc1','fc2','up','gate','down']
@@ -122,6 +123,10 @@ def processing_arguments(args):
         if torch.cuda.is_available():
             args.device = torch.device('cuda')
             logger.info(f"Number of CUDA devices available: {torch.cuda.device_count()}")
+            if torch.cuda.device_count() > 1:
+                args.use_multi_gpu = True
+            else:
+                args.use_multi_gpu = False
         else:
             args.device = torch.device('cpu')
             logger.info(f"Process will be running on CPU.")
@@ -197,8 +202,11 @@ def processing_arguments(args):
                 # 遍历字典中的值并平铺
                 for index, block in enumerate(json_data):
                     for key, value in json_data[block].items():
-                        for k, v in value.items():
-                            data.append(v)
+                        if isinstance(value, float):
+                            data.append(value)
+                        elif isinstance(value, dict):
+                            for k, v in value.items():
+                                data.append(v)
             meta['fisher'] = np.array(data)
         except:
             meta['fisher'] = None
@@ -271,3 +279,15 @@ def save_data(data, filename):
     except Exception as e:
         logger.error(f"Failed to save data to {filename}: {e}")
         raise
+
+
+def create_position_ids(length: int, device: str = "cpu") -> torch.Tensor:
+    """
+    Args:
+        length (int): 序列长度。
+    Returns:
+        torch.Tensor: 一个形状为 (1, length) 的 position_ids 张量。
+    """
+    position_ids = torch.arange(0, length, dtype=torch.long, device=device)
+    position_ids = position_ids.unsqueeze(0)  # shape: (1, length)
+    return position_ids

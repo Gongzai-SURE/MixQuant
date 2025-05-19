@@ -2,20 +2,15 @@ import torch
 import torch.nn as nn
 from typing import Union,Optional
 from transformers import AutoModelForCausalLM,EetqConfig
-
 from types import SimpleNamespace
 from collections import OrderedDict
 import os
 import sys
 sys.path.append('../../')
-
-#from mixq.quant import lm_pack, make_quant, QuantLinear
-
 from mixq.utils.misc import find_layers
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, message=".*do_sample.*")
-
 
 def get_hfmodel(model_name_or_path: str,
                 dtype='auto',
@@ -51,6 +46,30 @@ def get_hfmodel(model_name_or_path: str,
     torch.nn.init.uniform_ = org_uniform
     torch.nn.init.normal_ = org_normal
     return model
+
+
+def move(model):
+    if torch.cuda.is_available():
+        if torch.cuda.device_count() > 1:
+            from accelerate import infer_auto_device_map,dispatch_model
+            max_mem = {i: "15GiB" for i in range(torch.cuda.device_count())}
+            device_map = infer_auto_device_map(
+                model,
+                max_memory=max_mem,
+                no_split_module_classes=["LlamaDecoderLayer"],  # 如果是 LLaMA
+            )
+            model = dispatch_model(model, device_map=device_map)
+
+            # 获取模型首个参数的 device（generate 时需要）
+            first_device = next(model.parameters()).device
+        else:
+            model = model.to("cuda:0")
+            first_device = torch.device("cuda:0")
+    else:
+        model = model.to("cpu")
+        first_device = torch.device("cpu")
+
+    return model, first_device
 
 def load_model(model_name_or_path,
                checkpoint_path,

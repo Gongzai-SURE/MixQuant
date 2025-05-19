@@ -56,7 +56,9 @@ def create_attention_mask(length: int, device: str = "cpu") -> torch.Tensor:
 def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, args):
     num_gpus = torch.cuda.device_count()
     meta = args.meta
+    
     model_parts = split_model_across_gpus(model, meta, num_gpus)
+    
     # model.to(args.device)
     layer_batch = 1
     # 初始化各个目标参数
@@ -147,7 +149,7 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
     
     # 计算原始困惑度平均值
     original_perplexity = sum(original_perplexitys)/len(original_perplexitys)
-    print(f"Original_perplexity : {original_perplexity}")
+    logger.info(f"Original_perplexity : {original_perplexity}")
 
     # 计算每一层添加扰动后的困惑度变化以及对应fisher information
     test_bits = args.test_bit
@@ -160,7 +162,7 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
             if i == 0 or i == len(model_parts) - 1:
                 continue
             block_iterator = tqdm(model_part, desc=f"Cuda:{(i-1) % num_gpus} ModelBlock")
-            for step, seq_layer in enumerate(block_iterator):
+            for _, seq_layer in enumerate(block_iterator):
             # for seq_layer in model_part:
                 modified_fisher[bit][block_number] = {}
                 modified_perplexitys[bit][block_number] = {}
