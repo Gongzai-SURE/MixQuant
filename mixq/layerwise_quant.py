@@ -437,7 +437,7 @@ def quantize_model_awq(model, args, allocation):
     layer_bits = {}
 
     # BACK TO ORIGINAL AWQ
-    # allocation = [4]*len(allocation)
+    allocation = [3]*len(allocation)
     
     for i in range(0, len(allocation), len(sequential[0])):
         block_index = i // len(sequential[0])
