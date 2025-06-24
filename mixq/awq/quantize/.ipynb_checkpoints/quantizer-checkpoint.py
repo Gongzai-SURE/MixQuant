@@ -88,8 +88,7 @@ class AwqQuantizer:
         w = w.reshape(org_w_shape)
 
         return w, scales, zeros
-    
-    @torch.no_grad()
+
     def pseudo_dequantize_tensor(
         self, w: nn.Linear, scales: torch.Tensor, zeros: Optional[torch.Tensor] = None
     ):
@@ -112,13 +111,13 @@ class AwqQuantizer:
             common_device = next(self.modules[i].parameters()).device
           
             if common_device is None or str(common_device) == "cpu":
-                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-                    best_device = "cuda:" + str(min(i // (len(self.modules) // torch.cuda.device_count()), torch.cuda.device_count() - 1))
+                if torch.cuda.is_available():
+                    best_device = "cuda:" + str(i % torch.cuda.device_count())
                 else:
                     best_device = get_best_device()
 
-            self.modules[i] = self.modules[i].to(best_device)
-            common_device = next(self.modules[i].parameters()).device
+                self.modules[i] = self.modules[i].to(best_device)
+                common_device = next(self.modules[i].parameters()).device
 
             if self.module_kwargs.get("position_ids") is not None:
                 self.module_kwargs["position_ids"] = self.module_kwargs[
@@ -161,7 +160,7 @@ class AwqQuantizer:
             # [STEP 3]: Compute and apply clipping list
             if self.apply_clip:
                 clip_list = self._search_best_clip(
-                    self.modules[i], named_linears, input_feat,common_device
+                    self.modules[i], named_linears, input_feat
                 )
                 apply_clip(self.modules[i], clip_list)
                 clip_list = append_str_prefix(
@@ -170,7 +169,8 @@ class AwqQuantizer:
 
             # [STEP 4]: Quantize weights
             if not self.export_compatible:
-                self._apply_quant(self.modules[i], named_linears,self.layer_bits[i],common_device)
+                self._apply_quant(self.modules[i], named_linears,self.layer_bits[i])
+                # if self.layer_bits[i] != 4:
                 scale_back(self.modules[i], scales_list, input_feat_dict=input_feat)
 
             clear_memory()
@@ -187,17 +187,50 @@ class AwqQuantizer:
             clear_memory()
     
     @torch.no_grad()
-    def _apply_quant(self, module, named_linears: Dict[str, nn.Linear],layer_bits = None, device=None):
+    def _apply_quant(self, module, named_linears: Dict[str, nn.Linear],layer_bits = None):
         for name, linear_layer in named_linears.items():
             # NOTE: small regression in perplexity if linear layer uses .cpu().float()
-            linear_layer = linear_layer.to(device).half()
+            linear_layer = linear_layer.to(get_best_device()).half()
 
             linear_layer.weight.data, scales, zeros = self.pseudo_quantize_tensor(
                 linear_layer.weight.data, layer_bits[name]
             )
+            # Only bit is 4, we need to quantize the weights
+            # if layer_bits[name] == 4:
+            #     if self.version == "gemm":
+            #         scales = scales.t().contiguous()
+            #         zeros = zeros.t().contiguous()
+            #         q_linear_module = WQLinear_GEMM
+
+            #     elif self.version == "gemv":
+            #         q_linear_module = WQLinear_GEMV
+
+            #     elif self.version == "marlin":
+            #         q_linear_module = WQLinear_Marlin
+                
+            #     elif self.version == "gemv_fast":
+            #         q_linear_module = WQLinear_GEMVFast
+
+            #     else:
+            #         raise ValueError(f"Unknown version {self.version}")
+
+            #     q_linear = q_linear_module.from_linear(
+            #         linear=linear_layer,
+            #         w_bit=self.w_bit,
+            #         group_size=self.group_size,
+            #         init_only=False,
+            #         scales=scales,
+            #         zeros=zeros,
+            #     )
+
+            linear_layer.cpu()
+            #     q_linear.to(next(module.parameters()).device)
+                # set_op_by_name(module, name, q_linear)
 
             clear_memory()
 
+
+    @torch.no_grad()
     def _search_best_scale(
         self,
         module,
@@ -207,15 +240,16 @@ class AwqQuantizer:
         module2inspect=None,
         kwargs={},
     ):
+        
         if module2inspect is None:
             assert len(layers) == 1
             module2inspect = layers[0]
-
+        device = next(module2inspect.parameters()).device
         if "use_cache" in kwargs:
             kwargs.pop("use_cache")
 
         # Put x on the right device
-        inp = inp.to(next(module2inspect.parameters()).device)
+        inp = inp.to(device)
 
         # [STEP 1]: Compute per-channel mean of normalised weights
         # All layer weights are concatted together
@@ -254,7 +288,6 @@ class AwqQuantizer:
             best_scales,
         )
 
-    @torch.no_grad()
     def _compute_best_scale(
         self,
         x,
@@ -332,7 +365,7 @@ class AwqQuantizer:
         return best_scales.detach().cpu()
 
     @torch.no_grad()
-    def _search_best_clip(self, layer, named_linears, input_feat,device):
+    def _search_best_clip(self, layer, named_linears, input_feat):
         clip_list = []
         avoid_clipping = ["q_", "k_", "query", "key", "Wqkv"]
 
@@ -341,7 +374,7 @@ class AwqQuantizer:
             if any([_ in name for _ in avoid_clipping]):
                 continue
 
-            named_linears[name].to(device)
+            named_linears[name].to(get_best_device())
             max_val = self._compute_best_clip(
                 named_linears[name].weight, input_feat[name]
             )
@@ -413,7 +446,7 @@ class AwqQuantizer:
         samples = get_calib_dataset(
             data=self.calib_data,
             tokenizer=self.tokenizer,
-            n_samples=25,
+            n_samples=512,
             block_size=512,
             split="train",
             text_column="text",
@@ -480,6 +513,8 @@ class AwqQuantizer:
     
     @torch.no_grad()
     def _get_input_feat(self, layer, named_linears):
+        device = next(layer.parameters()).device
+
         # firstly, get input features of all linear layers
         def cache_input_hook(m, x, y, name, feat_dict):
             x = x[0]
@@ -502,7 +537,7 @@ class AwqQuantizer:
                     functools.partial(cache_input_hook, name=name, feat_dict=input_feat)
                 )
             )
-        self.inps = self.inps.to(next(layer.parameters()).device)  # in case multi-gpu
+        self.inps = self.inps.to(device)  # in case multi-gpu
         # get output as next layer's input
 
         # Sanitize the kwargs in case we use transformers version that contains
@@ -530,18 +565,10 @@ class AwqQuantizer:
                 Target module to quantize.
         """
         module_signature = inspect.signature(module.forward).parameters
-        device = next(module.parameters()).device
         sanitized_kwargs = {}
         for k, v in inputs_kwargs.items():
             if k in module_signature:
-                if isinstance(v, torch.Tensor):
-                    sanitized_kwargs[k] = v.to(device)
-                elif isinstance(v, tuple):
-                    sanitized_kwargs[k] = tuple(
-                        t.to(device) if isinstance(t, torch.Tensor) else t for t in v
-                    )
-                else:
-                    sanitized_kwargs[k] = v 
+                sanitized_kwargs[k] = v
         return sanitized_kwargs
     
     def get_model_layers(self):

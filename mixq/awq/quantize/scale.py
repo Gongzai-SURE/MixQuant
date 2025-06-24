@@ -29,6 +29,7 @@ allowed_act_fns = [
 #         layer.weight.data = layer.weight.data.reshape(org_shape)
 #         layer.cpu()
 
+@torch.no_grad()
 def apply_clip(module, clip_list: Tuple[str, torch.Tensor]):
     for name, max_val in clip_list:
         layer: nn.Linear = get_op_by_name(module, name)
@@ -55,7 +56,7 @@ def clip_back(module, clip_list: Tuple[str, torch.Tensor]):
         else:
             raise RuntimeError("Cannot recover clipped weights: original weights not saved in apply_clip!")
 
-
+@torch.no_grad()
 def apply_scale(module, scales_list, input_feat_dict=None):
     for prev_op_name, layer_names, scales in scales_list:
         prev_op = get_op_by_name(module, prev_op_name)
