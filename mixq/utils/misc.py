@@ -5,6 +5,7 @@ from datetime import datetime
 from loguru import logger
 import numpy as np
 import os
+from pathlib import Path
 from datetime import datetime
 
 #from eetq.modules.qlinear import EetqLinear
@@ -112,11 +113,17 @@ def processing_arguments(args):
     if args.logfile:
         logger.add(args.logfile, encoding="utf-8")
     else: # logging.在指定目录下生成日志文件
+        model_name = args.model.split("/")[-1]
+        log_path = f'/root/autodl-tmp/methods/mix_quantize/logs/{model_name}'
+        Path(log_path).mkdir(parents=True, exist_ok=True)
         if args.original:
-            logger_file_name = f'{get_current_time()}_{args.model.split("/")[-1]}_original'
+            logger_file_name = f'Original_{get_current_time()}'
         else:
-            logger_file_name = f'{get_current_time()}_{args.model.split("/")[-1]}_{"_".join(map(str, args.wbits))}'
-        logger.add(f"logs/{logger_file_name}.log", encoding="utf-8")
+            if args.strategy == 'fisher':
+                logger_file_name = f'Fisher_{args.target_bit}_{args.allocate_strategy}_{args.alpha}_{args.quant_method}_{get_current_time()}'
+            else:
+                logger_file_name = f'{args.strategy}_{args.quant_method}_{args.target_bit}_{get_current_time()}'
+        logger.add(f"{log_path}/{logger_file_name}.log", encoding="utf-8")
         logger.info("---" * 10)
 
     if args.device is None:
@@ -142,8 +149,11 @@ def processing_arguments(args):
         AssertionError('Please give wbits.')
     
     if args.save_path:
-        if not (args.save_path.endswith('.pth') or args.save_path.endswith('.pt')):
-            raise ValueError("The save path '--args.save' must end in .pth or .pt.")
+        if not os.path.exists(os.path.dirname(args.save_path)):
+            os.makedirs(os.path.dirname(args.save_path))
+
+        # if not (args.save_path.endswith('.pth') or args.save_path.endswith('.pt')):
+        #     raise ValueError("The save path '--args.save' must end in .pth or .pt.")
     
     
     with open('/root/autodl-tmp/methods/mix_quantize/model_config.json') as f:
@@ -190,28 +200,35 @@ def processing_arguments(args):
         if not layers_mixq[l]:
             meta['ratios'][l] = 0.0
 
-    if args.load_fisher:
+    if args.load_fisher or args.load_ppl:
         model_name = args.model.split('/')[-1]
+        meta['fisher'] = None
+        meta['ppl'] = None
         try:
-            data = []
-            fisher_file = find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}','fisher_data')
-            logger.info(f"Loading fisher data from {fisher_file}")
-            # with open(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/fisher_data_test.json') as f:
-            with open(fisher_file) as f:
-                json_data = json.load(f)
-                # 遍历字典中的值并平铺
-                for index, block in enumerate(json_data):
-                    for key, value in json_data[block].items():
-                        if isinstance(value, float):
-                            data.append(value)
-                        elif isinstance(value, dict):
-                            for k, v in value.items():
-                                data.append(v)
-            meta['fisher'] = np.array(data)
-        except:
-            meta['fisher'] = None
+            files = [
+                ('fisher', find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}', 'fisher_data')),
+                ('ppl', find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}', 'modified_perplexities'))
+            ]
+            for data_type, file_path in files:
+                if (data_type == 'fisher' and args.load_fisher) or (data_type == 'ppl' and args.load_ppl):
+                    if file_path:
+                        logger.info(f"Loading {data_type} data from {file_path}")
+                        with open(file_path) as f:
+                            json_data = json.load(f)
+                            data = []
+                            for block in json_data.values():
+                                for value in block.values():
+                                    if isinstance(value, float):
+                                        data.append(value)
+                                    elif isinstance(value, dict):
+                                        data.extend(value.values())
+                            meta[data_type] = np.array(data)
+        except Exception as e:
+            logger.warning(f"Error loading data: {e}")
     else:
         meta['fisher'] = None
+        meta['ppl'] = None
+
     
     meta['mixq_layers'] = layers_mixq
 

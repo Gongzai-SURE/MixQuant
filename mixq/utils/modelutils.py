@@ -151,12 +151,13 @@ def save_model(model,
             }, ckpt_path)
 
         print(f"fake quantized model is saved to {ckpt_path}")
+
     if packing:
         assert wbits in [3, 4], f"{wbits}bits is not supported."
         
         n_out_dict = {n: SimpleNamespace(n_out=quantizers[n].n_out) for n in quantizers}
-        lm_pack(model, quantizers, wbits)
-        # model_state_dict = make_state_dict(model, quantizers)
+
+        model_state_dict = make_state_dict(model, quantizers)
         model_state_dict = model.state_dict()
         
         torch.save({

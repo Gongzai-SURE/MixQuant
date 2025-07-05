@@ -31,8 +31,8 @@ def get_wikitext2(nsamples, seed, seqlen, tokenizer, train, local_dir):
             testdata = load_from_disk(local_dir)["test"]
         else:
             testdata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
-        testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
-        
+        testenc = tokenizer("\n\n".join(testdata["text"]), return_tensors='pt')
+
         return testenc
 
 def get_ptb(nsamples, seed, seqlen, tokenizer, train, local_dir):
@@ -80,12 +80,16 @@ def get_c4(nsamples, seed, seqlen, tokenizer, train, local_dir):
             tar = inp.clone()
             tar[:, :-1] = -100
             trainloader.append((inp, tar))
-        
         return trainloader
     else:
-        valdata = load_dataset(
-            'allenai/c4', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation'
-        )
+        if local_dir is not None:
+            valdata = load_from_disk(local_dir)
+        else:
+            valdata = load_dataset(
+                "allenai/c4",
+                data_files={"validation": "en/c4-validation.00000-of-00008.json.gz"},
+                split="validation",
+            )
         valenc = tokenizer(' '.join(valdata[:1100]['text']), return_tensors='pt')
         valenc = valenc.input_ids[:, :(256 * seqlen)]
 

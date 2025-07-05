@@ -21,24 +21,27 @@ import math
 import optuna
 from scipy.optimize import dual_annealing
 import numpy as np
+from loguru import logger
 pulp.LpSolverDefault.msg = False
 
 
 class Allocation:
     def __init__(self, bits=None, 
-                 layer_sizes=None, fisher=None, 
-                 R=None, alpha=0.1, 
-                 strategy=None,
-                 allocation=None):
+                 layer_sizes=None, fisher = None, ppl = None, 
+                 target_bit=None, alpha=0.1, top_r = 0.1,
+                 strategy=None, allocation=None):
         self.bits = bits                                    # bit width list
         self.original_bit = 16                              # original bit width   
         self.layer_sizes = self.modify_size(layer_sizes)    # layer size list
         self.layer_num = len(self.layer_sizes)              # number of layers
-        self.fisher = self.modify_fisher(fisher)            # fisher information list
-        self.R = R                                          # compression rate
-        self.alpha = alpha                                  # hyperparameter
+        self.fisher = self.set_Fisher(fisher)               # fisher information list
+        self.ppl = self.set_ppl(ppl)                        # perplexity list                                         
+        self.target_bit = target_bit                        # target bits
+        self.R = self.target_bit / self.original_bit        # compression rate
+        self.alpha = alpha                                  # hyperparameter, used to control the trade-off between compression and accuracy
+        self.top_r = top_r                                  # top r percentage for ppl allocation
         self.strategy = strategy                            # allocation strategy
-        self.allocation_result = allocation                       # store allocation results
+        self.allocation_result = allocation                 # store allocation results
 
     def set_bits(self, bits):
         self.bits = bits
@@ -46,17 +49,44 @@ class Allocation:
     def set_layer_sizes(self, layer_sizes):
         self.layer_sizes = layer_sizes
 
-    def set_fisher(self, fisher):
-        self.fisher = self.modify_fisher(fisher)
-
     def set_R(self, R):
         self.R = R
     
     def set_Fisher(self, fisher):
-        self.fisher = fisher
+        if fisher is not None:
+            if isinstance(fisher,dict):
+                fisher = list(fisher.values())
+                all_values = []
+                for index, block in enumerate(fisher):
+                    for key, value in block.items():
+                        for k, v in value.items():
+                            all_values.append(v)
+                self.fisher = all_values
+            else:
+                self.fisher = fisher
+        else:
+            self.fisher = None
+
+    def set_ppl(self, ppl):
+        if ppl is not None:
+            if isinstance(ppl,dict):
+                ppl = list(ppl.values())
+                all_values = []
+                for index, block in enumerate(ppl):
+                    for key, value in block.items():
+                        for k, v in value.items():
+                            all_values.append(v)
+                self.ppl = all_values
+            else:
+                self.ppl = ppl
+        else:
+            self.ppl = None
 
     def set_alpha(self, alpha):
         self.alpha = alpha
+
+    def set_top_r(self, top_r):
+        self.top_r = top_r
 
     def set_strategy(self, strategy):
         self.strategy = strategy
@@ -76,19 +106,7 @@ class Allocation:
         elif actutal_compression > self.R:
             return 2       
         
-    def modify_fisher(self,fisher):
-        # 将fisher格式变为转为list
-        if isinstance(fisher,dict):
-            fisher = list(fisher.values())
-            all_values = []
-            for index, block in enumerate(fisher):
-                for key, value in block.items():
-                    for k, v in value.items():
-                        all_values.append(v)
-            return all_values
-        else:
-            return fisher
-    
+
     def modify_size(self,layer_sizes):
         # 将fisher格式变为转为list
         if isinstance(layer_sizes,dict):
@@ -102,25 +120,33 @@ class Allocation:
             return layer_sizes
         
     def allocate(self):
-        if self.strategy == "greedy":
-            self.allocation_result = self._greedy_allocation()
-        elif self.strategy == "genetic":
-            self.allocation_result = self._genetic_allocation()
-        elif self.strategy == "rl":
-            self.allocation_result = self._reinforcement_learning_allocation()
-        elif self.strategy == "annealing":
-            self.allocation_result = self._annealing_allocation()
-        elif self.strategy == "bayesian":
-            self.allocation_result = self._bayesian_allocation()
-        elif self.strategy == "random":
-            self.allocation_result = self._random_allocation()
-        else:
-            raise ValueError("Unknown allocation strategy. Supported strategies: 'greedy', 'genetic', 'reinforcement_learning', 'annealing', 'bayesian' and 'random'")
+        if self.fisher is not None:
+            if self.strategy == "greedy":
+                self.allocation_result = self._greedy_allocation()
+            elif self.strategy == "genetic":
+                self.allocation_result = self._genetic_allocation()
+            elif self.strategy == "rl":
+                self.allocation_result = self._reinforcement_learning_allocation()
+            elif self.strategy == "annealing":
+                self.allocation_result = self._annealing_allocation()
+            elif self.strategy == "bayesian":
+                self.allocation_result = self._bayesian_allocation()
+            elif self.strategy == "random":
+                self.allocation_result = self._random_allocation()
+            else:
+                raise ValueError("Unknown allocation strategy. Supported strategies: 'greedy', 'genetic', 'reinforcement_learning', 'annealing', 'bayesian' and 'random'")
+            
+
+        if self.ppl is not None:
+            self._ppl_allocation()
+
+        return self.allocation_result
         
-    def _greedy_allocation(self, bit_allocation=None):
+        
+        
+    def _greedy_allocation(self):
         # 初始化
-        if bit_allocation is None:
-            bit_allocation = [min(self.bits)] * self.layer_num
+        bit_allocation = [min(self.bits)] * self.layer_num
         P_total = sum(self.layer_sizes)
         P_current = sum(p_i * (bit_i / self.original_bit) for p_i, bit_i in zip(self.layer_sizes, bit_allocation))
         
@@ -241,13 +267,35 @@ class Allocation:
         from .reinforce_learning import train
         return train(self.bits, self.fisher, self.layer_sizes, self.R, self.alpha)
 
-    def finetuning_allcoation(self):
+    def _ppl_allocation(self):
+        if self.ppl is None:
+            raise ValueError("Please provide perplexity values for PPL allocation.")
+        allocation_res = [int(self.target_bit)] * self.layer_num
+        logger.info(f"top_r: {self.top_r}, layer_num: {self.layer_num}, target_bit: {self.target_bit}")
+
+        top_k = int(self.top_r * self.layer_num)
+        if top_k == 0:
+            self.allocation_result = allocation_res
+            return 0
+        data = np.array(self.ppl)
+        top_indices = np.argsort(data)[-top_k:][::-1]  
+        bottom_indices = np.argsort(data)[:top_k]
+
+        # 调整困惑度越大，说明该层量化后对结果的影响越大，因此分配的位宽越大
+        for i in top_indices:
+            allocation_res[i] = max(self.bits)
+        for i in bottom_indices:
+            allocation_res[i] = min(self.bits)
+        
+        self.allocation_result = allocation_res
+
+    def finetuning_allocation(self):
         if self.allocation_result is None:
             raise ValueError("Please run the allocation method first.")
         else:
             check = self.check_allocation_result(self.allocation_result)
             if check:
-                print("The allocation result does not meet the compression rate constraint. Starting fine-tuning...")
+                logger.info("The allocation result does not meet the compression rate constraint. Starting fine-tuning...")
                 # 进行微调,采用贪心算法将位宽分配结果调整至符合压缩率约束
                 original_allocation = self.allocation_result.copy()
 
@@ -288,7 +336,6 @@ class Allocation:
                                 self.allocation_result[i] = max([b for b in self.bits if b < self.allocation_result[i]])
                                 P_current -= self.layer_sizes[i] * ((max_bit - self.allocation_result[i]) / self.original_bit)
                                 if P_current <= sum(self.layer_sizes) * self.R:
-                                    print("Fine-tuning completed. New allocation result:", self.allocation_result)
                                     break
                             
                 

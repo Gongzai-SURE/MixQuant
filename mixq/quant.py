@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from loguru import logger
-from transformers.models.falcon.modeling_falcon import FalconLinear
+# from transformers.models.falcon.modeling_falcon import FalconLinear
 
 try:
     import owq_cuda
@@ -208,22 +208,22 @@ def make_quant(module, quant_infos, wbits, name=''):
     for name1, child in module.named_children():
         make_quant(child, quant_infos, wbits, name + '.' + name1 if name != '' else name1)
 
-def lm_pack(model, quantinfos, wbits, linears=[nn.Linear, FalconLinear]):
-    from mixq.utils.misc import find_layers
-    layers = find_layers(model, linears)
-    layers = {n: layers[n] for n in quantinfos}
-    make_quant(model, quantinfos, wbits)
-    qlayers = find_layers(model, [QuantLinear])
-    logger.info('Packing ...')
-    for name in qlayers:
-        quantinfos[name] = quantinfos[name].cpu()
-                           # quantinfos[name].bits,
-        qlayers[name].pack(layers[name],
-                           quantinfos[name].scale, 
-                           quantinfos[name].zero, 
-                           )
-    logger.info('Done.')
-    return model
+# def lm_pack(model, quantinfos, wbits, linears=[nn.Linear, FalconLinear]):
+#     from mixq.utils.misc import find_layers
+#     layers = find_layers(model, linears)
+#     layers = {n: layers[n] for n in quantinfos}
+#     make_quant(model, quantinfos, wbits)
+#     qlayers = find_layers(model, [QuantLinear])
+#     logger.info('Packing ...')
+#     for name in qlayers:
+#         quantinfos[name] = quantinfos[name].cpu()
+#                            # quantinfos[name].bits,
+#         qlayers[name].pack(layers[name],
+#                            quantinfos[name].scale, 
+#                            quantinfos[name].zero, 
+#                            )
+#     logger.info('Done.')
+#     return model
 
 
 class QuantLinear(nn.Module):

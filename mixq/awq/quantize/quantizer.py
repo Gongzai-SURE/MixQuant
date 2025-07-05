@@ -413,7 +413,7 @@ class AwqQuantizer:
         samples = get_calib_dataset(
             data=self.calib_data,
             tokenizer=self.tokenizer,
-            n_samples=25,
+            n_samples=32,
             block_size=512,
             split="train",
             text_column="text",

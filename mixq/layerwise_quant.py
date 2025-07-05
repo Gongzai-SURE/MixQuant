@@ -20,6 +20,10 @@ def layerwise_quantize(model, dataloader, args):
     # target information
     quantizers = {}
     allocation_res = args.allocation if args.allocation else None
+    if args.quant_method == 'nearest':
+        logger.info('Using nearest method to quantize model.')
+        quantize_model_nearest(model, args)
+        return None
 
     layers, _, _ = parsing_layers(model, args.meta)
     # 提取大小
@@ -37,13 +41,16 @@ def layerwise_quantize(model, dataloader, args):
                 layer_param[name]=subset[name].weight.numel()
         layer_params[i]=copy.deepcopy(layer_param)
 
-    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, fisher=args.meta['fisher'], R=args.target_bit/16, strategy=args.allocate_strategy,alpha = args.alpha,allocation=allocation_res)
+    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, target_bit=args.target_bit, strategy=args.allocate_strategy,allocation=allocation_res)
 
     # 获取层位宽结果
     if allocation_res is None:
         if args.strategy == 'fisher':
             logger.info('Using fisher information strategy to quantize model.')
             layer_fisher(model, dataloader, args, allocation)
+        elif args.strategy == 'ppl':
+            logger.info('Using perplexity strategy to quantize model.')
+            layer_ppl(model, dataloader, args, allocation)
         elif args.strategy == 'threshold':
             logger.info('Using threshold strategy to quantize model.')
             allocation = layer_threshold(model, dataloader, args)
@@ -53,11 +60,15 @@ def layerwise_quantize(model, dataloader, args):
         elif args.strategy == 'random':
             logger.info('Using random strategy to quantize model.')
             allocation = layer_random(model, dataloader, args)
+        
         else:
             raise NotImplementedError(f"Strategy {args.strategy} is not implemented.")
     
-    allocation.finetuning_allcoation()
+    # allocation.finetuning_allocation()
     allocation_res = allocation.get_allocation_result()
+    if args.pure:
+        allocation_res = [int(args.target_bit)]*len(allocation_res)
+    logger.info(f"Fine-tuning completed. New allocation result: {allocation_res}")
 
     if args.quant_method == 'gptq':
         logger.info('Using gptq method to quantize model.')
@@ -65,9 +76,6 @@ def layerwise_quantize(model, dataloader, args):
     elif args.quant_method == 'awq':
         logger.info('Using awq method to quantize model.')
         quantize_model_awq(model, args, allocation_res)
-    elif args.quant_method == 'nearest':
-        logger.info('Using nearest method to quantize model.')
-        quantize_model_nearest(model, args)
     return quantizers
 
 def layer_fisher(model, dataloader, args, allocation):
@@ -77,20 +85,39 @@ def layer_fisher(model, dataloader, args, allocation):
         fisher_information, modified_perplexitys, original_perplexity = evaluate_fisher_information_with_quant_perturb_sub_block(model, dataloader, args)
         model_name = args.model.split('/')[-1]
         time =  get_current_time()
+        Path(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}').mkdir(parents=True, exist_ok=True)
         FI_filename = f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/fisher_data_{args.seqlen}_{args.nsamples}_{time}.json'
-        MP_filename = f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/modified_perplexitys_{args.seqlen}_{args.nsamples}_{time}_{original_perplexity}.json'
+        MP_filename = f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/modified_perplexities_{args.seqlen}_{args.nsamples}_{original_perplexity}_{time}.json'
         save_data(fisher_information, FI_filename)
         save_data(modified_perplexitys, MP_filename)
     else:
         fisher_information = meta['fisher']
     
     # 根据 Fisher 结果分配 bit 位数
-    allocation.set_fisher(fisher_information)
+    allocation.set_Fisher(fisher_information)
+    allocation.set_alpha(args.alpha)
     allocation.allocate()
-    allocation_res = allocation.get_allocation_result()
 
-    logger.info(f"Bit allocation result: {allocation_res}")
+def layer_ppl(model, dataloader, args, allocation):
+    meta = args.meta
+    # 获取模型层的fisher info 结果(本地加载或者新构造计算)
+    if meta['ppl'] is None:
+        fisher_information, modified_perplexitys, original_perplexity = evaluate_fisher_information_with_quant_perturb_sub_block(model, dataloader, args)
+        model_name = args.model.split('/')[-1]
+        time =  get_current_time()
+        Path(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}').mkdir(parents=True, exist_ok=True)
+        FI_filename = f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/fisher_data_{args.seqlen}_{args.nsamples}_{time}.json'
+        MP_filename = f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}/modified_perplexities_{args.seqlen}_{args.nsamples}_{original_perplexity}_{time}.json'
+        save_data(fisher_information, FI_filename)
+        save_data(modified_perplexitys, MP_filename)
+    else:
+        modified_perplexitys = meta['ppl']
     
+    # 根据 ppl 结果分配 bit 位数
+    allocation.set_ppl(modified_perplexitys)
+    allocation.set_top_r(args.top_r)
+    allocation.allocate()  
+
 def layer_random(layers, inps, inp_kwargs, meta, args):
     layer_params = {}
     for i,layer in enumerate(layers):
@@ -107,7 +134,7 @@ def layer_random(layers, inps, inp_kwargs, meta, args):
         layer_params[i]=copy.deepcopy(layer_param)
     
     # 根据模型压缩率要求随机分配 bit 位数
-    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, fisher=None, R=args.target_bit/16, strategy='random',alpha = None)
+    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, fisher=None, target_bit=args.target_bit, strategy='random',alpha = None)
 
 
 
@@ -368,7 +395,7 @@ def quantize_model_gptq(model, args, quantizers, allocation):
     else:
         sequential = [list(target_layers.keys())]
     layer_bits = {}
-    
+
     for i in range(0, len(allocation), len(sequential[0])):
         block_index = i // len(sequential[0])
         block_data = allocation[i:i + len(sequential[0])]
@@ -435,9 +462,6 @@ def quantize_model_awq(model, args, allocation):
     else:
         sequential = [list(target_layers.keys())]
     layer_bits = {}
-
-    # BACK TO ORIGINAL AWQ
-    allocation = [3]*len(allocation)
     
     for i in range(0, len(allocation), len(sequential[0])):
         block_index = i // len(sequential[0])
@@ -459,7 +483,7 @@ def quantize_model_nearest(model,args):
         layer = layers[i].to(args.device)
         subset = find_layers(layer)
         for name in subset:
-            quantizer = Quantizer(args.target_bit, perchannel=True, sym=args.sym, mse=False)
+            quantizer = Quantizer(int(args.target_bit), perchannel=True, sym=args.sym, mse=False)
             # quantizer = args.meta['quantizers'][f"{meta['prefix']}.{i}.{name}"]
             W = subset[name].weight.data
             quantizer.find_params(W, weight=True)
