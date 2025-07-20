@@ -1,0 +1,290 @@
+{
+    "0": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "1": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.546875
+    },
+    "2": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "3": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.552734375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "4": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.5546875,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "5": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "6": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "7": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "8": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "9": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.5546875,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "10": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "11": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "12": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.552734375,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "13": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "14": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "15": {
+        "self_attn.q_proj.weight": 2.55078125,
+        "self_attn.k_proj.weight": 2.552734375,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "16": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.560546875
+    },
+    "17": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "18": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "19": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "20": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.5546875,
+        "mlp.up_proj.weight": 2.5546875,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "21": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "22": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.5546875,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "23": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "24": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.5546875,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "25": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "26": {
+        "self_attn.q_proj.weight": 2.55859375,
+        "self_attn.k_proj.weight": 2.556640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "27": {
+        "self_attn.q_proj.weight": 2.5625,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.5546875,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.556640625
+    },
+    "28": {
+        "self_attn.q_proj.weight": 2.5546875,
+        "self_attn.k_proj.weight": 2.56640625,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.5546875
+    },
+    "29": {
+        "self_attn.q_proj.weight": 2.560546875,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.55859375,
+        "self_attn.o_proj.weight": 2.55859375,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.556640625,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "30": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.55859375,
+        "self_attn.v_proj.weight": 2.5546875,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.556640625,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    },
+    "31": {
+        "self_attn.q_proj.weight": 2.556640625,
+        "self_attn.k_proj.weight": 2.5546875,
+        "self_attn.v_proj.weight": 2.556640625,
+        "self_attn.o_proj.weight": 2.556640625,
+        "mlp.gate_proj.weight": 2.55859375,
+        "mlp.up_proj.weight": 2.55859375,
+        "mlp.down_proj.weight": 2.55859375
+    }
+}

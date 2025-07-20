@@ -1,0 +1,290 @@
+{
+    "0": {
+        "self_attn.q_proj.weight": 30.046875,
+        "self_attn.k_proj.weight": 98.375,
+        "self_attn.v_proj.weight": 41.09375,
+        "self_attn.o_proj.weight": 26.90625,
+        "mlp.gate_proj.weight": 32.875,
+        "mlp.up_proj.weight": 19.6875,
+        "mlp.down_proj.weight": 15.859375
+    },
+    "1": {
+        "self_attn.q_proj.weight": 491.0,
+        "self_attn.k_proj.weight": 16.390625,
+        "self_attn.v_proj.weight": 17.46875,
+        "self_attn.o_proj.weight": 15.3046875,
+        "mlp.gate_proj.weight": 248.5,
+        "mlp.up_proj.weight": 22.46875,
+        "mlp.down_proj.weight": 13.6015625
+    },
+    "2": {
+        "self_attn.q_proj.weight": 16.390625,
+        "self_attn.k_proj.weight": 19.625,
+        "self_attn.v_proj.weight": 20.90625,
+        "self_attn.o_proj.weight": 15.1015625,
+        "mlp.gate_proj.weight": 32.0,
+        "mlp.up_proj.weight": 23.9375,
+        "mlp.down_proj.weight": 15.21875
+    },
+    "3": {
+        "self_attn.q_proj.weight": 17.828125,
+        "self_attn.k_proj.weight": 18.640625,
+        "self_attn.v_proj.weight": 17.71875,
+        "self_attn.o_proj.weight": 13.6640625,
+        "mlp.gate_proj.weight": 39.84375,
+        "mlp.up_proj.weight": 27.046875,
+        "mlp.down_proj.weight": 19.03125
+    },
+    "4": {
+        "self_attn.q_proj.weight": 19.078125,
+        "self_attn.k_proj.weight": 22.78125,
+        "self_attn.v_proj.weight": 15.8046875,
+        "self_attn.o_proj.weight": 16.625,
+        "mlp.gate_proj.weight": 22.453125,
+        "mlp.up_proj.weight": 19.5,
+        "mlp.down_proj.weight": 20.21875
+    },
+    "5": {
+        "self_attn.q_proj.weight": 18.265625,
+        "self_attn.k_proj.weight": 22.515625,
+        "self_attn.v_proj.weight": 14.96875,
+        "self_attn.o_proj.weight": 14.3046875,
+        "mlp.gate_proj.weight": 17.734375,
+        "mlp.up_proj.weight": 17.390625,
+        "mlp.down_proj.weight": 20.0
+    },
+    "6": {
+        "self_attn.q_proj.weight": 30.640625,
+        "self_attn.k_proj.weight": 25.15625,
+        "self_attn.v_proj.weight": 15.234375,
+        "self_attn.o_proj.weight": 14.9765625,
+        "mlp.gate_proj.weight": 22.40625,
+        "mlp.up_proj.weight": 17.59375,
+        "mlp.down_proj.weight": 16.890625
+    },
+    "7": {
+        "self_attn.q_proj.weight": 20.65625,
+        "self_attn.k_proj.weight": 16.859375,
+        "self_attn.v_proj.weight": 15.3203125,
+        "self_attn.o_proj.weight": 13.40625,
+        "mlp.gate_proj.weight": 19.65625,
+        "mlp.up_proj.weight": 16.859375,
+        "mlp.down_proj.weight": 17.453125
+    },
+    "8": {
+        "self_attn.q_proj.weight": 14.21875,
+        "self_attn.k_proj.weight": 16.390625,
+        "self_attn.v_proj.weight": 14.796875,
+        "self_attn.o_proj.weight": 13.9140625,
+        "mlp.gate_proj.weight": 18.296875,
+        "mlp.up_proj.weight": 18.25,
+        "mlp.down_proj.weight": 17.609375
+    },
+    "9": {
+        "self_attn.q_proj.weight": 10.75,
+        "self_attn.k_proj.weight": 11.546875,
+        "self_attn.v_proj.weight": 14.7421875,
+        "self_attn.o_proj.weight": 13.7265625,
+        "mlp.gate_proj.weight": 17.34375,
+        "mlp.up_proj.weight": 15.515625,
+        "mlp.down_proj.weight": 15.6171875
+    },
+    "10": {
+        "self_attn.q_proj.weight": 13.6875,
+        "self_attn.k_proj.weight": 13.828125,
+        "self_attn.v_proj.weight": 12.4453125,
+        "self_attn.o_proj.weight": 12.4921875,
+        "mlp.gate_proj.weight": 16.015625,
+        "mlp.up_proj.weight": 15.4140625,
+        "mlp.down_proj.weight": 14.8515625
+    },
+    "11": {
+        "self_attn.q_proj.weight": 18.46875,
+        "self_attn.k_proj.weight": 18.359375,
+        "self_attn.v_proj.weight": 13.28125,
+        "self_attn.o_proj.weight": 14.15625,
+        "mlp.gate_proj.weight": 15.4140625,
+        "mlp.up_proj.weight": 13.9296875,
+        "mlp.down_proj.weight": 14.96875
+    },
+    "12": {
+        "self_attn.q_proj.weight": 11.4921875,
+        "self_attn.k_proj.weight": 12.3828125,
+        "self_attn.v_proj.weight": 12.203125,
+        "self_attn.o_proj.weight": 12.4765625,
+        "mlp.gate_proj.weight": 14.6484375,
+        "mlp.up_proj.weight": 15.2265625,
+        "mlp.down_proj.weight": 14.9453125
+    },
+    "13": {
+        "self_attn.q_proj.weight": 12.6484375,
+        "self_attn.k_proj.weight": 13.8359375,
+        "self_attn.v_proj.weight": 11.5390625,
+        "self_attn.o_proj.weight": 12.4375,
+        "mlp.gate_proj.weight": 14.9921875,
+        "mlp.up_proj.weight": 14.875,
+        "mlp.down_proj.weight": 14.734375
+    },
+    "14": {
+        "self_attn.q_proj.weight": 14.375,
+        "self_attn.k_proj.weight": 14.7265625,
+        "self_attn.v_proj.weight": 11.6015625,
+        "self_attn.o_proj.weight": 12.1796875,
+        "mlp.gate_proj.weight": 14.7265625,
+        "mlp.up_proj.weight": 14.15625,
+        "mlp.down_proj.weight": 14.5703125
+    },
+    "15": {
+        "self_attn.q_proj.weight": 8.875,
+        "self_attn.k_proj.weight": 9.515625,
+        "self_attn.v_proj.weight": 12.109375,
+        "self_attn.o_proj.weight": 11.8203125,
+        "mlp.gate_proj.weight": 15.3359375,
+        "mlp.up_proj.weight": 14.2734375,
+        "mlp.down_proj.weight": 14.734375
+    },
+    "16": {
+        "self_attn.q_proj.weight": 12.9921875,
+        "self_attn.k_proj.weight": 14.3203125,
+        "self_attn.v_proj.weight": 12.9453125,
+        "self_attn.o_proj.weight": 14.1875,
+        "mlp.gate_proj.weight": 16.9375,
+        "mlp.up_proj.weight": 16.453125,
+        "mlp.down_proj.weight": 16.453125
+    },
+    "17": {
+        "self_attn.q_proj.weight": 13.03125,
+        "self_attn.k_proj.weight": 16.328125,
+        "self_attn.v_proj.weight": 12.859375,
+        "self_attn.o_proj.weight": 13.6640625,
+        "mlp.gate_proj.weight": 16.46875,
+        "mlp.up_proj.weight": 15.8203125,
+        "mlp.down_proj.weight": 15.6796875
+    },
+    "18": {
+        "self_attn.q_proj.weight": 11.8125,
+        "self_attn.k_proj.weight": 15.0625,
+        "self_attn.v_proj.weight": 12.3671875,
+        "self_attn.o_proj.weight": 15.4453125,
+        "mlp.gate_proj.weight": 17.109375,
+        "mlp.up_proj.weight": 15.9765625,
+        "mlp.down_proj.weight": 14.5390625
+    },
+    "19": {
+        "self_attn.q_proj.weight": 15.1015625,
+        "self_attn.k_proj.weight": 13.609375,
+        "self_attn.v_proj.weight": 12.21875,
+        "self_attn.o_proj.weight": 14.4453125,
+        "mlp.gate_proj.weight": 18.34375,
+        "mlp.up_proj.weight": 15.359375,
+        "mlp.down_proj.weight": 15.6171875
+    },
+    "20": {
+        "self_attn.q_proj.weight": 15.7421875,
+        "self_attn.k_proj.weight": 17.390625,
+        "self_attn.v_proj.weight": 12.484375,
+        "self_attn.o_proj.weight": 12.03125,
+        "mlp.gate_proj.weight": 17.515625,
+        "mlp.up_proj.weight": 15.7265625,
+        "mlp.down_proj.weight": 13.25
+    },
+    "21": {
+        "self_attn.q_proj.weight": 16.25,
+        "self_attn.k_proj.weight": 14.046875,
+        "self_attn.v_proj.weight": 14.0078125,
+        "self_attn.o_proj.weight": 20.84375,
+        "mlp.gate_proj.weight": 19.375,
+        "mlp.up_proj.weight": 15.9140625,
+        "mlp.down_proj.weight": 14.546875
+    },
+    "22": {
+        "self_attn.q_proj.weight": 13.84375,
+        "self_attn.k_proj.weight": 13.8125,
+        "self_attn.v_proj.weight": 14.0,
+        "self_attn.o_proj.weight": 16.5625,
+        "mlp.gate_proj.weight": 19.921875,
+        "mlp.up_proj.weight": 16.3125,
+        "mlp.down_proj.weight": 13.4921875
+    },
+    "23": {
+        "self_attn.q_proj.weight": 14.53125,
+        "self_attn.k_proj.weight": 13.953125,
+        "self_attn.v_proj.weight": 13.859375,
+        "self_attn.o_proj.weight": 17.53125,
+        "mlp.gate_proj.weight": 21.53125,
+        "mlp.up_proj.weight": 18.484375,
+        "mlp.down_proj.weight": 15.2421875
+    },
+    "24": {
+        "self_attn.q_proj.weight": 16.34375,
+        "self_attn.k_proj.weight": 14.9375,
+        "self_attn.v_proj.weight": 13.0859375,
+        "self_attn.o_proj.weight": 10.9765625,
+        "mlp.gate_proj.weight": 14.9609375,
+        "mlp.up_proj.weight": 15.3125,
+        "mlp.down_proj.weight": 14.25
+    },
+    "25": {
+        "self_attn.q_proj.weight": 18.8125,
+        "self_attn.k_proj.weight": 28.59375,
+        "self_attn.v_proj.weight": 12.640625,
+        "self_attn.o_proj.weight": 8.8828125,
+        "mlp.gate_proj.weight": 18.21875,
+        "mlp.up_proj.weight": 14.890625,
+        "mlp.down_proj.weight": 12.890625
+    },
+    "26": {
+        "self_attn.q_proj.weight": 17.953125,
+        "self_attn.k_proj.weight": 20.34375,
+        "self_attn.v_proj.weight": 12.5234375,
+        "self_attn.o_proj.weight": 12.6484375,
+        "mlp.gate_proj.weight": 15.9609375,
+        "mlp.up_proj.weight": 11.90625,
+        "mlp.down_proj.weight": 12.6640625
+    },
+    "27": {
+        "self_attn.q_proj.weight": 48.34375,
+        "self_attn.k_proj.weight": 16.71875,
+        "self_attn.v_proj.weight": 15.859375,
+        "self_attn.o_proj.weight": 17.484375,
+        "mlp.gate_proj.weight": 15.5078125,
+        "mlp.up_proj.weight": 15.609375,
+        "mlp.down_proj.weight": 13.671875
+    },
+    "28": {
+        "self_attn.q_proj.weight": 12.640625,
+        "self_attn.k_proj.weight": 27.515625,
+        "self_attn.v_proj.weight": 12.046875,
+        "self_attn.o_proj.weight": 10.125,
+        "mlp.gate_proj.weight": 13.2109375,
+        "mlp.up_proj.weight": 11.8359375,
+        "mlp.down_proj.weight": 11.0078125
+    },
+    "29": {
+        "self_attn.q_proj.weight": 15.1640625,
+        "self_attn.k_proj.weight": 11.828125,
+        "self_attn.v_proj.weight": 13.5625,
+        "self_attn.o_proj.weight": 12.5703125,
+        "mlp.gate_proj.weight": 9.984375,
+        "mlp.up_proj.weight": 10.828125,
+        "mlp.down_proj.weight": 10.3046875
+    },
+    "30": {
+        "self_attn.q_proj.weight": 15.6953125,
+        "self_attn.k_proj.weight": 17.609375,
+        "self_attn.v_proj.weight": 11.515625,
+        "self_attn.o_proj.weight": 10.109375,
+        "mlp.gate_proj.weight": 10.2890625,
+        "mlp.up_proj.weight": 8.6796875,
+        "mlp.down_proj.weight": 9.9609375
+    },
+    "31": {
+        "self_attn.q_proj.weight": 10.8984375,
+        "self_attn.k_proj.weight": 9.9140625,
+        "self_attn.v_proj.weight": 10.859375,
+        "self_attn.o_proj.weight": 10.953125,
+        "mlp.gate_proj.weight": 8.390625,
+        "mlp.up_proj.weight": 9.609375,
+        "mlp.down_proj.weight": 8.7890625
+    }
+}

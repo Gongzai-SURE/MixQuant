@@ -1,0 +1,292 @@
+{
+    "8": {
+        "0": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "1": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.515625,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.515625
+        },
+        "2": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "3": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "4": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "5": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "6": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "7": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "8": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "9": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "10": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "11": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "12": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "13": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "14": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "15": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "16": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "17": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "18": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "19": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "20": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "21": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "22": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "23": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "24": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "25": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "26": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "27": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "28": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "29": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "30": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        },
+        "31": {
+            "self_attn.q_proj": 2.513671875,
+            "self_attn.k_proj": 2.513671875,
+            "self_attn.v_proj": 2.513671875,
+            "self_attn.o_proj": 2.513671875,
+            "mlp.gate_proj": 2.513671875,
+            "mlp.up_proj": 2.513671875,
+            "mlp.down_proj": 2.513671875
+        }
+    }
+}

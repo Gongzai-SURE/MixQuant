@@ -5,7 +5,7 @@ import json
 
 class GeneticAlgorithm:
     def __init__(self, bits, p, F, B, R, alpha, 
-                 population_size=10000, max_generations=100, cxpb=0.7, mutpb=0.2, elite_size=20):
+                 population_size=10000, max_generations=50, cxpb=0.7, mutpb=0.2, elite_size=20):
         self.bits = bits
         self.p = p
         self.F = F
@@ -94,7 +94,9 @@ class GeneticAlgorithm:
 
         if is_repaired:
             # 如果修复成功，则计算目标函数值
-            objective = sum(self.F[i] * np.exp(-self.alpha * (self.B / repaired_individual[i])) for i in range(self.N))
+            objective = sum(self.F[i] * (np.exp(-self.alpha * (repaired_individual[i]/self.B))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.B))- np.exp(-self.alpha)) \
+                           for i in range(self.N))
+            # objective = sum(self.F[i] * np.exp(-self.alpha * (self.B / repaired_individual[i])) for i in range(self.N))
             return objective,
         else:
             # 如果修复失败，则添加高代价惩罚项
@@ -113,7 +115,12 @@ class GeneticAlgorithm:
 
     def initialize_population(self):
         """初始化种群"""
-        return self.toolbox.population(n=self.population_size)
+        tmp_best_individual = [int(self.R * self.B)] * self.N
+        population = self.toolbox.population(n=self.population_size)
+        # 将 best_individual 转换为 Individual 类型并加入种群
+        best_ind = creator.Individual(tmp_best_individual)
+        population[0]=best_ind
+        return population
     
     def eaWithElitism(self, population, toolbox, cxpb, mutpb, ngen, elite_size=10, verbose=True):
         logbook = tools.Logbook()
@@ -171,7 +178,8 @@ class GeneticAlgorithm:
         self.best_individual = tools.selBest(results, k=1)[0]
         return results, log
 
-""" # 测试代码
+
+ # 测试代码
 if __name__ == "__main__":
     def load_json(file):
         with open(file, 'r', encoding='utf-8') as f:
@@ -183,17 +191,17 @@ if __name__ == "__main__":
         return np.array(data)
 
     # 定义参数
-    bits = [2, 4, 8]  # 可选位宽
+    bits = [2,3,4]  # 可选位宽
     F = load_json('/root/autodl-tmp/methods/mix_quantize/model_info/llama2-7b/fisher_data.json')
     p = load_json('/root/autodl-tmp/methods/mix_quantize/model_info/llama2-7b/LayersParams.json')
     N = len(F)  # 层数
     B = 16  # 原始位宽
     P_total = np.sum(p)  # 总参数规模
-    R = 0.25  # 压缩率
-    alpha = 3  # 目标函数中的超参数
+    R = 0.1875  # 压缩率 0.25 0.1875
+    alpha = 10  # 目标函数中的超参数
 
     # 创建遗传算法实例
-    ga = GeneticAlgorithm(bits, p, F, B, P_total, R, alpha)
+    ga = GeneticAlgorithm(bits, p, F, B, R, alpha)
 
     # 运行遗传算法
     result, log = ga.run()
@@ -203,6 +211,6 @@ if __name__ == "__main__":
     best_fitness = best_individual.fitness.values[0]
     print("Best individual:", best_individual)
     print("fisher:", F)
-    print("Best fitness:", best_fitness) """ 
-
+    print("Best fitness:", best_fitness) 
+    
 

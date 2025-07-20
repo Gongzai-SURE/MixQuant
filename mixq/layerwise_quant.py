@@ -48,27 +48,28 @@ def layerwise_quantize(model, dataloader, args):
         if args.strategy == 'fisher':
             logger.info('Using fisher information strategy to quantize model.')
             layer_fisher(model, dataloader, args, allocation)
+            allocation.finetuning_allocation()
+            allocation_res = allocation.get_allocation_result()
         elif args.strategy == 'ppl':
             logger.info('Using perplexity strategy to quantize model.')
             layer_ppl(model, dataloader, args, allocation)
+            allocation.finetuning_allocation()
+            allocation_res = allocation.get_allocation_result()
         elif args.strategy == 'threshold':
             logger.info('Using threshold strategy to quantize model.')
             allocation = layer_threshold(model, dataloader, args)
-        elif args.strategy == 'activation':
-            logger.info('Using activation strategy to quantize model.')
-            allocation = layer_activation(model, dataloader, args)
-        elif args.strategy == 'random':
-            logger.info('Using random strategy to quantize model.')
-            allocation = layer_random(model, dataloader, args)
-        
+        # elif args.strategy == 'activation':
+        #     logger.info('Using activation strategy to quantize model.')
+        #     allocation = layer_activation(model, dataloader, args)
+        # elif args.strategy == 'random':
+        #     logger.info('Using random strategy to quantize model.')
+        #     allocation = layer_random(model, dataloader, args)
+        elif args.strategy is None:
+            allocation_res = [int(args.target_bit)] * (len(layer_params)* len(layer_params[0]))
         else:
             raise NotImplementedError(f"Strategy {args.strategy} is not implemented.")
     
-    # allocation.finetuning_allocation()
-    allocation_res = allocation.get_allocation_result()
-    if args.pure:
-        allocation_res = [int(args.target_bit)]*len(allocation_res)
-    logger.info(f"Fine-tuning completed. New allocation result: {allocation_res}")
+    logger.info(f"Allocation result: {allocation_res}")
 
     if args.quant_method == 'gptq':
         logger.info('Using gptq method to quantize model.')
@@ -135,8 +136,6 @@ def layer_random(layers, inps, inp_kwargs, meta, args):
     
     # 根据模型压缩率要求随机分配 bit 位数
     allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, fisher=None, target_bit=args.target_bit, strategy='random',alpha = None)
-
-
 
     # 执行位宽量化
     progress_bar = tqdm(range(len(layers)), desc="Quantizing")
@@ -462,7 +461,7 @@ def quantize_model_awq(model, args, allocation):
     else:
         sequential = [list(target_layers.keys())]
     layer_bits = {}
-    
+
     for i in range(0, len(allocation), len(sequential[0])):
         block_index = i // len(sequential[0])
         block_data = allocation[i:i + len(sequential[0])]

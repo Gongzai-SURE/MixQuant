@@ -24,7 +24,9 @@ class BayesianOptimization:
         bit_allocation = np.array(bit_allocation)
         
         # 目标1：敏感度加权和
-        objective_value = np.sum(self.F * np.exp(-self.alpha * (self.B / bit_allocation)))
+        objective_value = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- math.exp(-self.alpha)) \
+                           for F_i, bit_i in zip(self.F, bit_allocation))
+        # objective_value = np.sum(self.F * np.exp(-self.alpha * (self.B / bit_allocation)))
         
         # 目标2：压缩率约束违反程度
         compressed_size = np.sum(self.p * (bit_allocation / self.B))

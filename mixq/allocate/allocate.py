@@ -93,6 +93,16 @@ class Allocation:
 
     def get_allocation_result(self):
         return self.allocation_result
+
+    def objective_function(self, bit_allocation):
+        if self.fisher is None:
+            raise ValueError("Fisher information is not set. Please provide Fisher information for the objective function.")
+        
+        # 计算精度损失
+        accuracy_loss = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- math.exp(-self.alpha)) \
+                           for F_i, bit_i in zip(self.fisher, bit_allocation))
+
+        return accuracy_loss
     
     def check_allocation_result(self, allocation_result = None):
         actutal_compression = sum(layer_size * (bit / self.original_bit) 
@@ -143,7 +153,6 @@ class Allocation:
         return self.allocation_result
         
         
-        
     def _greedy_allocation(self):
         # 初始化
         bit_allocation = [min(self.bits)] * self.layer_num
@@ -153,7 +162,7 @@ class Allocation:
         if self.check_allocation_result(bit_allocation) == 1:
             while True:
                 # 计算当前目标函数值
-                current_objective = sum(F_i * math.exp(-self.alpha * (self.original_bit / bit_i)) for F_i, bit_i in zip(self.fisher, bit_allocation))
+                current_objective = self.objective_function(bit_allocation)
                 
                 # 寻找最优的层进行位宽增加
                 best_delta = -float('inf')
@@ -166,7 +175,7 @@ class Allocation:
                         # 找到下一个更高的位宽
                         next_bit = min([b for b in self.bits if b > current_bit])
                         # 计算目标函数的变化量
-                        delta = self.fisher[i] * (math.exp(-self.alpha * (self.original_bit / next_bit)) - math.exp(-self.alpha * (self.original_bit / current_bit)))
+                        delta = self.fisher[i] * (math.exp(-self.alpha * (self.original_bit / next_bit)) - math.exp(-self.alpha * (self.original_bit / current_bit)))  
                         if delta > best_delta:
                             best_delta = delta
                             best_layer = i
@@ -191,7 +200,7 @@ class Allocation:
             # 找到精度损失最小的层进行位宽减少
             while True:
                 # 计算当前目标函数值
-                current_objective = sum(F_i * math.exp(-self.alpha * (self.original_bit / bit_i)) for F_i, bit_i in zip(self.fisher, bit_allocation))
+                current_objective = self.objective_function(bit_allocation)
                 # 寻找最优的层进行位宽减少
                 best_delta = float('inf')
                 best_layer = -1
@@ -233,7 +242,7 @@ class Allocation:
         # 目标函数
         def objective_function(bit_allocation):
             bit_allocation = np.array([map_to_discrete(bit) for bit in bit_allocation])
-            objective = np.sum(self.fisher * np.exp(-self.alpha * (self.original_bit / bit_allocation)))
+            objective = self.objective_acc_decline(bit_allocation)
             
             compressed_size = np.sum(self.layer_sizes * (bit_allocation / self.original_bit))
             constraint = compressed_size - P_total * self.R
@@ -253,7 +262,8 @@ class Allocation:
         from .genetic import GeneticAlgorithm
         # 初始化
         genetic = GeneticAlgorithm(self.bits, self.layer_sizes, self.fisher, self.original_bit, self.R, self.alpha)
-        genetic.run()
+        result,log= genetic.run()
+        logger.info(f"Genetic Algorithm Result: {result}, Log: {log}")
         return genetic.get_best_individual()
     
     def _bayesian_allocation(self):

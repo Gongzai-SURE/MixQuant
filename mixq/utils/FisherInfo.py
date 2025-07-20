@@ -126,9 +126,10 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
                 for seq_layer in model_part:
                     original_fisher[block_number] = {}
                     target_layers = find_layers(seq_layer)
+                    
                     for name, param in seq_layer.named_parameters():
-                        layer_name = name.rsplit('.', 1)[0]
-                        if layer_name not in target_layers.keys():
+                        layer_name,suffix= name.rsplit('.', 1)[0], name.rsplit('.', 1)[1]
+                        if layer_name not in target_layers.keys() or 'bias' in suffix:
                             continue
                         if param.requires_grad:
                             if param.grad is not None:
@@ -138,6 +139,12 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
                                     original_fisher[block_number][layer_name] += torch.sum(param.grad.detach() ** 2).to("cpu")
                     block_number += 1
 
+            # 清理内存
+            for model_part in model_parts:
+                for param in model_part.parameters():
+                    if param.grad is not None:
+                        param.grad.detach_()
+                        param.grad = None
             del outputs, logits, shift_logits, shift_labels, perplexity, inputs
         torch.cuda.empty_cache()
         batch = tuple(t.to('cpu') for t in batch)
@@ -150,6 +157,7 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
     # 计算原始困惑度平均值
     original_perplexity = sum(original_perplexitys)/len(original_perplexitys)
     logger.info(f"Original_perplexity : {original_perplexity}")
+    torch.cuda.empty_cache()
 
     # 计算每一层添加扰动后的困惑度变化以及对应fisher information
     test_bits = args.test_bit
@@ -167,13 +175,14 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
                 modified_fisher[bit][block_number] = {}
                 modified_perplexitys[bit][block_number] = {}
                 target_layers = find_layers(seq_layer)
+                target_layers = {k: v for k, v in target_layers.items() if 'bias' not in k}
                 count_layer = 0
                 delta_thetas = {}
                 param_list = {}
                 # 采用层组件添加扰动的方式，设置层组件规模为layer_batch，即每 layer_batch 层为一组 进行随机扰动的添加
                 for name, param in seq_layer.named_parameters():
-                    layer_name = name.rsplit('.', 1)[0]
-                    if layer_name not in target_layers.keys():
+                    layer_name,suffix= name.rsplit('.', 1)[0], name.rsplit('.', 1)[1]
+                    if layer_name not in target_layers.keys() or 'bias' in suffix:
                         continue
                     
                     count_layer += 1
@@ -246,6 +255,13 @@ def evaluate_fisher_information_with_quant_perturb_sub_block(model, dataset, arg
                                             modified_fisher[bit][block_number][layer_name] = torch.sum(param_list[layer_name].grad.detach() ** 2).to("cpu")
                                         else:
                                             modified_fisher[bit][block_number][layer_name] += torch.sum(param_list[layer_name].grad.detach() ** 2).to("cpu")
+                                
+                                # 清理内存
+                                for model_part in model_parts:
+                                    for param in model_part.parameters():
+                                        if param.grad is not None:
+                                            param.grad.detach_()
+                                            param.grad = None
 
                                 del inputs, outputs, logits, shift_logits, shift_labels
                                 torch.cuda.empty_cache()
@@ -356,8 +372,8 @@ def evaluate_fisher_information_with_quant_perturb_sub(model, dataset, args):
                     original_fisher[block_number] = {}
                     target_layers = find_layers(seq_layer)
                     for name, param in seq_layer.named_parameters():
-                        layer_name = name.rsplit('.', 1)[0]
-                        if layer_name not in target_layers.keys():
+                        layer_name,suffix= name.rsplit('.', 1)[0], name.rsplit('.', 1)[1]
+                        if layer_name not in target_layers.keys() or 'bias' in suffix:
                             continue
                         if param.requires_grad:
                             if param.grad is not None:
@@ -398,8 +414,8 @@ def evaluate_fisher_information_with_quant_perturb_sub(model, dataset, args):
                 target_layers = find_layers(seq_layer)
                 # 逐层添加扰动并进行fisher info的计算
                 for name, param in seq_layer.named_parameters():
-                    layer_name = name.rsplit('.', 1)[0]
-                    if layer_name not in target_layers.keys():
+                    layer_name,suffix= name.rsplit('.', 1)[0], name.rsplit('.', 1)[1]
+                    if layer_name not in target_layers.keys() or 'bias' in suffix:
                         continue
 
                     # 扰动噪声 δθ，作为模拟量化带来扰动的波动

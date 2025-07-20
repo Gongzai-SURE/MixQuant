@@ -45,7 +45,7 @@ def get_hfmodel(model_name_or_path: str,
     torch.nn.init.kaiming_uniform_ = org_kaiming_uniform
     torch.nn.init.uniform_ = org_uniform
     torch.nn.init.normal_ = org_normal
-    return model
+    return model.half()
 
 
 def move(model):

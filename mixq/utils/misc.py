@@ -16,6 +16,7 @@ def find_layers(module, layers=[nn.Linear], name=''):
     # logger.info(type(module))
     if type(module) in layers:
         return {name: module}
+        # return {name: module.weight}
     res = {}
     for name1, child in module.named_children():
         res.update(find_layers(
@@ -119,10 +120,12 @@ def processing_arguments(args):
         if args.original:
             logger_file_name = f'Original_{get_current_time()}'
         else:
-            if args.strategy == 'fisher':
-                logger_file_name = f'Fisher_{args.target_bit}_{args.allocate_strategy}_{args.alpha}_{args.quant_method}_{get_current_time()}'
+            if args.strategy:
+                logger_file_name = f'{args.strategy}_{args.target_bit}_{args.allocate_strategy}_{args.alpha}_{args.quant_method}_{get_current_time()}'
+            elif args.strategy is None and args.quant_method:
+                logger_file_name = f'{args.quant_method}_{args.target_bit}_{get_current_time()}'
             else:
-                logger_file_name = f'{args.strategy}_{args.quant_method}_{args.target_bit}_{get_current_time()}'
+                logger_file_name = f'Test_{get_current_time()}'
         logger.add(f"{log_path}/{logger_file_name}.log", encoding="utf-8")
         logger.info("---" * 10)
 
@@ -142,8 +145,6 @@ def processing_arguments(args):
 
     if args.wbits:
         assert len(args.wbits) >= 2, 'Please give two or more values for wbits.'
-        if 16 not in args.wbits:
-            logger.info("We support 16-bit to maintian the model's accuracy. Please add 16 to the wbits.")
         args.wbits = sorted(args.wbits)
     else:
         AssertionError('Please give wbits.')
