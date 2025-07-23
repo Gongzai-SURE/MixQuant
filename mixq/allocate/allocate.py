@@ -22,6 +22,7 @@ import optuna
 from scipy.optimize import dual_annealing
 import numpy as np
 from loguru import logger
+from .allocate_utils import *
 pulp.LpSolverDefault.msg = False
 
 
@@ -29,10 +30,10 @@ class Allocation:
     def __init__(self, bits=None, 
                  layer_sizes=None, fisher = None, ppl = None, 
                  target_bit=None, alpha=0.1, top_r = 0.1,
-                 strategy=None, allocation=None):
+                 strategy=None, allocation=None, sameLayerReset=False):
         self.bits = bits                                    # bit width list
         self.original_bit = 16                              # original bit width   
-        self.layer_sizes = self.modify_size(layer_sizes)    # layer size list
+        self.layer_sizes = modify_size(layer_sizes)    # layer size list
         self.layer_num = len(self.layer_sizes)              # number of layers
         self.fisher = self.set_Fisher(fisher)               # fisher information list
         self.ppl = self.set_ppl(ppl)                        # perplexity list                                         
@@ -42,6 +43,7 @@ class Allocation:
         self.top_r = top_r                                  # top r percentage for ppl allocation
         self.strategy = strategy                            # allocation strategy
         self.allocation_result = allocation                 # store allocation results
+        self.sameLayerReset = sameLayerReset                # whether to reset bits between same name layer
 
     def set_bits(self, bits):
         self.bits = bits
@@ -103,7 +105,7 @@ class Allocation:
                            for F_i, bit_i in zip(self.fisher, bit_allocation))
 
         return accuracy_loss
-    
+
     def check_allocation_result(self, allocation_result = None):
         actutal_compression = sum(layer_size * (bit / self.original_bit) 
                                   for layer_size, bit in zip(self.layer_sizes, allocation_result)
@@ -116,18 +118,7 @@ class Allocation:
         elif actutal_compression > self.R:
             return 2       
         
-
-    def modify_size(self,layer_sizes):
-        # 将fisher格式变为转为list
-        if isinstance(layer_sizes,dict):
-            layer_sizes = list(layer_sizes.values())
-            all_values = []
-            for index, block in enumerate(layer_sizes):
-                for key, value in block.items():
-                    all_values.append(value)
-            return all_values
-        else:
-            return layer_sizes
+    
         
     def allocate(self):
         if self.fisher is not None:
@@ -146,91 +137,19 @@ class Allocation:
             else:
                 raise ValueError("Unknown allocation strategy. Supported strategies: 'greedy', 'genetic', 'reinforcement_learning', 'annealing', 'bayesian' and 'random'")
             
-
-        if self.ppl is not None:
+        if self.ppl is not None:        
             self._ppl_allocation()
 
         return self.allocation_result
         
         
     def _greedy_allocation(self):
-        # 初始化
-        bit_allocation = [min(self.bits)] * self.layer_num
-        P_total = sum(self.layer_sizes)
-        P_current = sum(p_i * (bit_i / self.original_bit) for p_i, bit_i in zip(self.layer_sizes, bit_allocation))
+        from .greeady import GreedyBitAllocation
+        # 初始化贪心算法
+        greedy = GreedyBitAllocation(self.bits, self.layer_sizes, self.fisher,self.original_bit, self.R, self.alpha, self.sameLayerReset)
+        greedy.allocate()
+        return greedy.get_allocation_result()
         
-        if self.check_allocation_result(bit_allocation) == 1:
-            while True:
-                # 计算当前目标函数值
-                current_objective = self.objective_function(bit_allocation)
-                
-                # 寻找最优的层进行位宽增加
-                best_delta = -float('inf')
-                best_layer = -1
-                best_new_bit = -1
-                
-                for i in range(self.layer_num):
-                    current_bit = bit_allocation[i]
-                    if current_bit < max(self.bits):
-                        # 找到下一个更高的位宽
-                        next_bit = min([b for b in self.bits if b > current_bit])
-                        # 计算目标函数的变化量
-                        delta = self.fisher[i] * (math.exp(-self.alpha * (self.original_bit / next_bit)) - math.exp(-self.alpha * (self.original_bit / current_bit)))  
-                        if delta > best_delta:
-                            best_delta = delta
-                            best_layer = i
-                            best_new_bit = next_bit
-                
-                # 如果没有可以增加的层，终止
-                if best_layer == -1:
-                    break
-                
-                # 尝试增加位宽
-                new_P_current = P_current + self.layer_sizes[best_layer] * ((best_new_bit - bit_allocation[best_layer]) / self.original_bit)
-                
-                # 检查是否满足压缩率约束
-                if new_P_current <= P_total * self.R:
-                    # 更新位宽和总参数规模
-                    bit_allocation[best_layer] = best_new_bit
-                    P_current = new_P_current
-                else:
-                    # 无法增加，终止
-                    break
-        elif self.check_allocation_result(bit_allocation) == 2:
-            # 找到精度损失最小的层进行位宽减少
-            while True:
-                # 计算当前目标函数值
-                current_objective = self.objective_function(bit_allocation)
-                # 寻找最优的层进行位宽减少
-                best_delta = float('inf')
-                best_layer = -1
-                best_new_bit = -1
-                for i in range(self.layer_num):
-                    current_bit = bit_allocation[i]
-                    if current_bit > min(self.bits):
-                        # 找到下一个更低的位宽
-                        next_bit = max([b for b in self.bits if b < current_bit])
-                        # 计算目标函数的变化量
-                        delta = self.fisher[i] * (math.exp(-self.alpha * (self.original_bit / next_bit)) - math.exp(-self.alpha * (self.original_bit / current_bit)))
-                        if delta < best_delta:
-                            best_delta = delta
-                            best_layer = i
-                            best_new_bit = next_bit
-                # 如果没有可以减少的层，终止
-                if best_layer == -1:
-                    break
-                # 尝试减少位宽 
-                new_P_current = P_current - self.layer_sizes[best_layer] * ((bit_allocation[best_layer] - best_new_bit) / self.original_bit)
-                # 检查是否满足压缩率约束
-                if new_P_current >= P_total * self.R:
-                    # 更新位宽和总参数规模
-                    bit_allocation[best_layer] = best_new_bit
-                    P_current = new_P_current
-                else:
-                    # 无法减少，终止
-                    break
-                
-        return bit_allocation
     
     def _annealing_allocation(self):
         P_total = sum(self.layer_sizes)
@@ -347,110 +266,4 @@ class Allocation:
                                 P_current -= self.layer_sizes[i] * ((max_bit - self.allocation_result[i]) / self.original_bit)
                                 if P_current <= sum(self.layer_sizes) * self.R:
                                     break
-                            
-                
-
-
-
-    # def _random_allocation(self):
-    #     randoms = RandomAllocation(self.bits, self.layer_sizes, self.fisher, self.original_bit, self.R, self.alpha)
-    #     genetic.run()
-    #     return genetic.get_best_individual()
-
-
-
-
-
-""" def Greedy_allocation_list(bits, target_bits, layers_num):
-    allocation_strategy = {}
-    bits_num = len(bits)
-    bits.sort(reverse=True)
-    total_bits = target_bits * layers_num
-    # Formulate a linear pr  ogramming problem
-    prob = pulp.LpProblem("Maximize_Z", pulp.LpMaximize)
-    # Define variables
-    vars = []
-    for i in range(bits_num):
-        vars.append(pulp.LpVariable(f'x{i}', lowBound=0, cat=pulp.LpInteger))
-    # Objective function
-    prob += sum([bits[i] * vars[i] for i in range(bits_num)])
-    # Constraints
-    prob += sum([vars[i] for i in range(bits_num)]) == layers_num
-    prob += sum([vars[i]*bits[i] for i in range(bits_num)]) <= total_bits
-    # Solve the problem
-    prob.solve()
-    # Output results
-    for v in prob.variables():
-        allocation_strategy[bits[int(v.name[1:])]] = int(v.varValue)
-    allocation_strategy = dict(sorted(allocation_strategy.items(), key=lambda x: x[0]))
-    return allocation_strategy
-
-def allocation_is_legal(allocation_strategy, bits, target_bits, layers_num):
-    bits_num = len(bits)
-    total_bits = target_bits * layers_num
-    # The average number of bits allocated to each layer is less than the target bit
-    for i in range(bits_num):
-        if bits[i] not in allocation_strategy:
-            raise ValueError('The bit width is not in the allocation strategy')
-        total_bits -= allocation_strategy[bits[i]] * bits[i]
-    if  total_bits < 0:
-        raise ValueError('The total number of bits assigned to each layer is greater than the target bit')
-    
-def load_json(file):
-    # 加载json文件数据
-    with open(file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data
-
-def sort_FI_layer(data):
-    from collections import defaultdict
-    values_dict = defaultdict(list)
-    for block in data:
-        for key, value in data[block].items():
-            values_dict[key].append(value)
-
-    rank_dict = {}
-    for key, values in values_dict.items():
-        sorted_values = sorted(values, reverse=True)
-        ranks = {v: i + 1 for i, v in enumerate(sorted_values)}
-        rank_dict[key] = [ranks[v] for v in values]
-    return rank_dict
-
-def sort_FI_in_all(data):
-    from collections import defaultdict
-
-    all_values = []
-    for index, block in enumerate(data):
-        for key, value in data[index].items():
-            all_values.append((f"{index}_{key}", value)) 
-
-    sorted_values = sorted(all_values, key=lambda x: x[1], reverse=False)
-    rank_dict = {}
-    for rank, (combined_key, _) in enumerate(sorted_values, start=1):
-        index, key = combined_key.split('_', 1)  
-        rank_dict[(int(index), key)] = rank  
-
-    result = defaultdict(dict)
-    for (index, key), rank in rank_dict.items():
-        result[index][key] = rank
-
-    return dict(result)
-
-def judge_bits(rank,strategy):
-    total_nums = 0
-    for bit,nums in strategy.items():
-        total_nums += nums
-        if rank < total_nums or rank == total_nums:
-            return bit
-
-def get_bits_list(layers_score, strategy):
-    sorted_score = sort_FI_in_all(layers_score)
-    res = []
-    for index,layer_score_rank in sorted_score.items():
-        layers_bit = {}
-        for layer_name,score_rank in layer_score_rank.items():
-            bit = judge_bits(score_rank,strategy)
-            layers_bit[layer_name] = bit
-        res.append(layers_bit)
-    return res
- """
+                                           

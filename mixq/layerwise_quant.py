@@ -41,7 +41,11 @@ def layerwise_quantize(model, dataloader, args):
                 layer_param[name]=subset[name].weight.numel()
         layer_params[i]=copy.deepcopy(layer_param)
 
-    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, target_bit=args.target_bit, strategy=args.allocate_strategy,allocation=allocation_res)
+    allocation = Allocation(bits=args.wbits, layer_sizes=layer_params, 
+                            target_bit=args.target_bit, 
+                            strategy=args.allocate_strategy, 
+                            allocation=allocation_res,
+                            sameLayerReset=args.sameLayerReset)
 
     # 获取层位宽结果
     if allocation_res is None:

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/qwen2.5-14b',  #qwen2-1.5b   llama2-7b llama2-13b qwen2.5-7b
+        '--model', type=str,default = '/root/autodl-tmp/models/llama-7b',  #qwen2-1.5b   llama2-7b llama2-13b qwen2.5-7b llama-7b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -104,6 +104,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--layers', nargs='+', type=str, default=None,
         help='Layers to apply MixQuant.'
+    )
+    parser.add_argument(
+        '--sameLayerReset', action='store_true',
+        help='Whether to reset bits between same name layer.'
     )
     parser.add_argument(
         '--seed', type=int, default=0,

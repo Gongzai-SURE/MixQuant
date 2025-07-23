@@ -2,6 +2,7 @@ import random
 import numpy as np
 from deap import base, creator, tools
 import json
+from .allocate_utils import *
 
 class GeneticAlgorithm:
     def __init__(self, bits, p, F, B, R, alpha, 

@@ -5,6 +5,7 @@ import json
 import warnings
 from functools import partial
 import time
+from .allocate_utils import *
 
 class BayesianOptimization:
     def __init__(self, bits, p, F, B, R, alpha, n_trials=8000):

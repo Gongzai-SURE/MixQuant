@@ -107,6 +107,52 @@ def seed_all(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
+def log_args(logger, args):
+    important_args = {
+        "Model Settings": {
+            "model": args.model,
+            "groupsize": args.groupsize
+        },
+        "Dataset Settings": {
+            "val_dataset": args.dataset,
+            "dataset_dir": args.dataset_dir,
+            "nsamples": args.nsamples
+        },
+        "Quantization Strategy": {
+            "quant_method": args.quant_method,
+            "wbits": args.wbits,
+            "target_bit": args.target_bit,
+            "strategy": args.strategy,
+            "allocate_strategy": args.allocate_strategy,
+            "sameLayerReset": args.sameLayerReset,
+            "alpha": args.alpha,
+            "top_r": args.top_r,
+            "test_bit": args.test_bit
+        },
+        "Runtime Settings": {
+            "device": args.device,
+            "seed": args.seed,
+        },
+        "Evaluation": {
+            "no_eval": args.no_eval,
+            "reasoning": args.reasoning
+        }
+    }
+
+    # 构建表格字符串
+    table = "\n"+"="*50 + "\n"
+    table += "Experiment Configuration\n"
+    table += "="*50 + "\n"
+    
+    for category, params in important_args.items():
+        table += f"\n[{category}]\n"
+        table += "-"*50 + "\n"
+        for key, value in params.items():
+            table += f"{key:>20}: {str(value):<30}\n"
+    
+    table += "="*50 + "\n"
+    
+    logger.info(table)
 
 # check args
 def processing_arguments(args):
@@ -127,7 +173,7 @@ def processing_arguments(args):
             else:
                 logger_file_name = f'Test_{get_current_time()}'
         logger.add(f"{log_path}/{logger_file_name}.log", encoding="utf-8")
-        logger.info("---" * 10)
+        log_args(logger, args)
 
     if args.device is None:
         if torch.cuda.is_available():
