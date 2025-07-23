@@ -15,16 +15,10 @@ constraints and requests:
 2. The quantization bit width assigned to each layer is as large as possible
 3. The total number of bits assigned to each layer is an integer,and bit width is in bits
 '''
-import pulp
-import json
-import math
-import optuna
-from scipy.optimize import dual_annealing
+
 import numpy as np
 from loguru import logger
 from .allocate_utils import *
-pulp.LpSolverDefault.msg = False
-
 
 class Allocation:
     def __init__(self, bits=None, 
@@ -101,7 +95,7 @@ class Allocation:
             raise ValueError("Fisher information is not set. Please provide Fisher information for the objective function.")
         
         # 计算精度损失
-        accuracy_loss = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- math.exp(-self.alpha)) \
+        accuracy_loss = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- np.exp(-self.alpha)) \
                            for F_i, bit_i in zip(self.fisher, bit_allocation))
 
         return accuracy_loss
@@ -118,7 +112,6 @@ class Allocation:
         elif actutal_compression > self.R:
             return 2       
         
-    
         
     def allocate(self):
         if self.fisher is not None:
@@ -152,6 +145,7 @@ class Allocation:
         
     
     def _annealing_allocation(self):
+        from scipy.optimize import dual_annealing
         P_total = sum(self.layer_sizes)
 
         # 控制位宽到可选位宽上
@@ -194,7 +188,7 @@ class Allocation:
 
     def _reinforcement_learning_allocation(self):
         from .reinforce_learning import train
-        return train(self.bits, self.fisher, self.layer_sizes, self.R, self.alpha)
+        return train(self.bits, self.fisher, self.layer_sizes, self.R, self.alpha,self.sameLayerReset)
 
     def _ppl_allocation(self):
         if self.ppl is None:

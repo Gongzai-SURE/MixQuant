@@ -19,14 +19,16 @@ UPDATE_ITERS = 10
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BitAllocationEnv:
-    def __init__(self, layer_sizes, bits, F, alpha, R):
+    def __init__(self, layer_sizes, bits, F, alpha, R, sameLayerReset, origin_bit):
         # 将numpy数组转换为GPU张量
-        self.layer_sizes = torch.tensor(layer_sizes, dtype=torch.float32, device=device)
-        self.bits = torch.tensor(bits, dtype=torch.float32, device=device)
-        self.F = torch.tensor(F, dtype=torch.float32, device=device)
+        self.layer_sizes = torch.tensor(layer_sizes, dtype=torch.float16, device=device)
+        self.bits = torch.tensor(bits, dtype=torch.float16, device=device)
+        self.F = torch.tensor(F, dtype=torch.float16, device=device)
         self.alpha = alpha
         self.R = R
-        self.original_size = torch.sum(self.layer_sizes) * 32  # GPU计算
+        self.original_size = torch.sum(self.layer_sizes) * 16  # GPU计算
+        self.sameLayerReset = sameLayerReset
+        self.origin_bit = origin_bit
         self.max_budget = self.original_size * R
         self.n_layers = len(layer_sizes)
         self.reset()
@@ -81,7 +83,8 @@ class BitAllocationEnv:
     def _calculate_final_reward(self):
         """GPU加速的奖励计算"""
         allocated_bits_tensor = torch.tensor(self.allocated_bits, device=device)
-        loss = torch.sum(self.F * torch.exp(-self.alpha * allocated_bits_tensor))
+        loss = torch.sum(F_i * (torch.exp(-self.alpha * (bit_i/self.original_bit))- torch.exp(-self.alpha)) / (torch.exp(-self.alpha * (1.5/self.original_bit))- torch.exp(-self.alpha)) \
+                           for F_i, bit_i in zip(self.F, allocated_bits_tensor))
         return -loss
 
 class Actor(nn.Module):
@@ -172,9 +175,9 @@ class PPO:
             self.actor_optim.step()
 
  
-def train(bits = [2, 3, 4, 8], F = None, layer_sizes = None, alpha = 1, R = 0.25):
+def train(bits = [2, 3, 4, 8], F = None, layer_sizes = None, alpha = 1, R = 0.25, sameLayerReset=False, origin_bit=16):
     # 初始化环境和Agent
-    env = BitAllocationEnv(layer_sizes, bits, F, alpha, R)
+    env = BitAllocationEnv(layer_sizes, bits, F, alpha, R, sameLayerReset, origin_bit)
     state_dim = env._get_state().shape[0]
     action_dim = len(bits)
     agent = PPO(state_dim, action_dim)
