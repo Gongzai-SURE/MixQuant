@@ -97,7 +97,6 @@ class GeneticAlgorithm:
             # 如果修复成功，则计算目标函数值
             objective = sum(self.F[i] * (np.exp(-self.alpha * (repaired_individual[i]/self.B))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.B))- np.exp(-self.alpha)) \
                            for i in range(self.N))
-            # objective = sum(self.F[i] * np.exp(-self.alpha * (self.B / repaired_individual[i])) for i in range(self.N))
             return objective,
         else:
             # 如果修复失败，则添加高代价惩罚项

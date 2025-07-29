@@ -117,54 +117,91 @@ def load_model(model_name_or_path,
     print("Done.")
     return model
     
-def save_model(model, 
-               quantizers,
-               save_path,
-               packing:bool,
-               fake:bool):
-    
-    def make_state_dict(model, quantizers):
-        model_state_dict = OrderedDict()
-        for name, module in model.named_modules():
-            if name in quantizers:
-                state_dict = module.state_dict()
-                for key in state_dict.keys():
-                    model_state_dict[name+'.'+key] = state_dict[key]
 
-        return model_state_dict
-    
-    dtype = model.dtype
-    wbits = list(quantizers.values())[0].bits
+def save_model(model, 
+               save_path: str,
+               model_name_or_path: str = None,
+               fake: bool = True):
+    """
+    Parameters:
+        model: model to be saved (supports Transformers model)
+        save_path: save directory
+        model_name_or_path: original model name/path (used to get tokenizer)
+        fake: whether it is a fake quantization model
+    """
+    os.makedirs(save_path, exist_ok=True)
     
     if fake:
-        ckpt_path = save_path.replace('.pt', '_fake.pt')
-        # model_state_dict = make_state_dict(model, quantizers)
-        model_state_dict = model.state_dict()
-        out_ids_dict = {name : quantizers[name].out_ids for name in quantizers}
-        
-        torch.save({
-            'model_state_dict': model_state_dict,
-            'out_ids_dict': out_ids_dict,
-            'packing': False,
-            'dtype' : dtype,
-            'bits' : wbits,
-            }, ckpt_path)
+        if hasattr(model, 'save_pretrained'):
+            model.save_pretrained(save_path)
+            print(f"Fake quantized model (Transformers format) saved to {save_path}")
+        else:
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'dtype': str(model.dtype),
+            }, os.path.join(save_path, "model_fake.pt"))
+            print(f"Fake quantized model (PT format) saved to {save_path}")
+    
+    if model_name_or_path:
+        try:
+            from transformers import AutoTokenizer
+            tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+            tokenizer.save_pretrained(save_path)
+            print(f"Tokenizer saved to {save_path}")
+        except Exception as e:
+            print(f"Tokenizer not saved: {e}")
 
-        print(f"fake quantized model is saved to {ckpt_path}")
 
-    if packing:
-        assert wbits in [3, 4], f"{wbits}bits is not supported."
-        
-        n_out_dict = {n: SimpleNamespace(n_out=quantizers[n].n_out) for n in quantizers}
 
-        model_state_dict = make_state_dict(model, quantizers)
-        model_state_dict = model.state_dict()
+
+# def save_model(model, 
+#                quantizers,
+#                save_path,
+#                packing:bool,
+#                fake:bool):
+    
+#     def make_state_dict(model, quantizers):
+#         model_state_dict = OrderedDict()
+#         for name, module in model.named_modules():
+#             if name in quantizers:
+#                 state_dict = module.state_dict()
+#                 for key in state_dict.keys():
+#                     model_state_dict[name+'.'+key] = state_dict[key]
+
+#         return model_state_dict
+    
+#     dtype = model.dtype
+#     wbits = list(quantizers.values())[0].bits
+    
+#     if fake:
+#         ckpt_path = save_path.replace('.pt', '_fake.pt')
+#         # model_state_dict = make_state_dict(model, quantizers)
+#         model_state_dict = model.state_dict()
+#         out_ids_dict = {name : quantizers[name].out_ids for name in quantizers}
         
-        torch.save({
-            'model_state_dict': model_state_dict,
-            'n_out_dict': n_out_dict,
-            'packing': True,
-            'dtype' : dtype,
-            'bits' : wbits, 
-            }, save_path)
-        print(f"{wbits}bit quantized packing model is saved to {save_path}")
+#         torch.save({
+#             'model_state_dict': model_state_dict,
+#             'out_ids_dict': out_ids_dict,
+#             'packing': False,
+#             'dtype' : dtype,
+#             'bits' : wbits,
+#             }, ckpt_path)
+
+#         print(f"fake quantized model is saved to {ckpt_path}")
+
+#     if packing:
+#         assert wbits in [3, 4], f"{wbits}bits is not supported."
+        
+#         n_out_dict = {n: SimpleNamespace(n_out=quantizers[n].n_out) for n in quantizers}
+
+#         model_state_dict = make_state_dict(model, quantizers)
+#         model_state_dict = model.state_dict()
+        
+#         torch.save({
+#             'model_state_dict': model_state_dict,
+#             'n_out_dict': n_out_dict,
+#             'packing': True,
+#             'dtype' : dtype,
+#             'bits' : wbits, 
+#             }, save_path)
+#         print(f"{wbits}bit quantized packing model is saved to {save_path}")

@@ -93,7 +93,6 @@ class Allocation:
     def objective_function(self, bit_allocation):
         if self.fisher is None:
             raise ValueError("Fisher information is not set. Please provide Fisher information for the objective function.")
-        
         # 计算精度损失
         accuracy_loss = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- np.exp(-self.alpha)) \
                            for F_i, bit_i in zip(self.fisher, bit_allocation))
@@ -153,9 +152,9 @@ class Allocation:
             return min(self.bits, key=lambda x: abs(x - continuous_value))
 
         # 目标函数
-        def objective_function(bit_allocation):
+        def objective_function_all(bit_allocation):
             bit_allocation = np.array([map_to_discrete(bit) for bit in bit_allocation])
-            objective = self.objective_acc_decline(bit_allocation)
+            objective = self.objective_function(bit_allocation)
             
             compressed_size = np.sum(self.layer_sizes * (bit_allocation / self.original_bit))
             constraint = compressed_size - P_total * self.R
@@ -165,7 +164,7 @@ class Allocation:
 
         bounds = [(min(self.bits), max(self.bits)) for _ in range(self.layer_num)]
 
-        result = dual_annealing(objective_function, bounds, maxiter=1000, seed=42)
+        result = dual_annealing(objective_function_all, bounds, maxiter=1000, seed=42)
 
         bit_allocation = np.array([map_to_discrete(bit) for bit in result.x])
         
@@ -176,7 +175,7 @@ class Allocation:
         # 初始化
         genetic = GeneticAlgorithm(self.bits, self.layer_sizes, self.fisher, self.original_bit, self.R, self.alpha)
         result,log= genetic.run()
-        logger.info(f"Genetic Algorithm Result: {result}, Log: {log}")
+        logger.info(f"Genetic Algorithm Log: {log}")
         return genetic.get_best_individual()
     
     def _bayesian_allocation(self):
@@ -188,7 +187,7 @@ class Allocation:
 
     def _reinforcement_learning_allocation(self):
         from .reinforce_learning import train
-        return train(self.bits, self.fisher, self.layer_sizes, self.R, self.alpha,self.sameLayerReset)
+        return train(self.bits, self.fisher, self.layer_sizes, self.alpha, self.R, self.sameLayerReset)
 
     def _ppl_allocation(self):
         if self.ppl is None:
@@ -219,11 +218,8 @@ class Allocation:
             check = self.check_allocation_result(self.allocation_result)
             if check:
                 logger.info("The allocation result does not meet the compression rate constraint. Starting fine-tuning...")
-                # 进行微调,采用贪心算法将位宽分配结果调整至符合压缩率约束
+                
                 original_allocation = self.allocation_result.copy()
-
-                # 按照贪心算法进行微调
-                # self.allocation_result = self._greedy_allocation(original_allocation)
 
                 # 按照层顺序进行微调
                 if check == 1:

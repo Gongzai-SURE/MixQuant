@@ -111,7 +111,8 @@ def log_args(logger, args):
     important_args = {
         "Model Settings": {
             "model": args.model,
-            "groupsize": args.groupsize
+            "groupsize": args.groupsize,
+            "model_save_path": args.save_path
         },
         "Dataset Settings": {
             "val_dataset": args.dataset,
@@ -189,7 +190,22 @@ def processing_arguments(args):
     else:
         args.device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
 
+    if args.allocation:
+        if isinstance(args.allocation, str):
+            args.allocation = [int(a) for a in args.allocation.split(',')]
+        elif isinstance(args.allocation, list):
+            args.allocation = [int(a) for a in args.allocation]
+        else:
+            raise ValueError("Allocation should be a string or a list of integers.")
+        assert len(args.allocation) >= 2, 'Please give two or more values for allocation.'
+
     if args.wbits:
+        if isinstance(args.wbits, str):
+            args.wbits = [int(w) for w in args.wbits.split(',')]
+        elif isinstance(args.wbits, list):
+            args.wbits = [int(w) for w in args.wbits]
+        else:
+            raise ValueError("wbits should be a string or a list of integers.")
         assert len(args.wbits) >= 2, 'Please give two or more values for wbits.'
         args.wbits = sorted(args.wbits)
     else:

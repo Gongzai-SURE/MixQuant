@@ -1,14 +1,15 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from collections import deque
 import random
-# from .allocate_utils import *
-from allocate_utils import *
+from .allocate_utils import *
+# from allocate_utils import *
 
 # 超参数
-EPISODES = 500
+EPISODES = 1000
 BATCH_SIZE = 32
 GAMMA = 0.99
 CLIP_EPSILON = 0.2
@@ -34,6 +35,7 @@ class BitAllocationEnv:
         
         # 最优动作记录（初始化为均匀分配方案）
         self.best_allocations = [int(R * origin_bit)] * self.n_layers
+        # self.best_reward = float('-inf')
         self.best_reward = self._calculate_reward_for_allocation(self.best_allocations)
         
         self.reset()
@@ -59,7 +61,7 @@ class BitAllocationEnv:
 
         # 预算检查
         if abs(new_usage - self.max_budget) < 30000:
-            reward = torch.tensor(100, device=device)
+            reward = torch.tensor(10, device=device)
             done = True
         else:
             self.allocated_bits.append(bit_value.item())
@@ -102,33 +104,85 @@ class BitAllocationEnv:
             device=device
         )
 
+# class Actor(nn.Module):
+#     def __init__(self, state_dim, action_dim):
+#         super().__init__()
+#         self.net = nn.Sequential(
+#             nn.Linear(state_dim, 1024),
+#             nn.ReLU(),
+#             nn.Linear(1024, 256),
+#             nn.ReLU(),
+#             nn.Linear(256, action_dim),
+#             nn.Softmax(dim=-1)
+#         )
+#         self.to(device) 
+        
+#     def forward(self, state):
+#         return self.net(state)
+
+# class Critic(nn.Module):
+#     def __init__(self, state_dim):
+#         super().__init__()
+#         self.net = nn.Sequential(
+#             nn.Linear(state_dim, 256),
+#             nn.ReLU(),
+#             nn.Linear(256, 1))
+#         self.to(device)  
+    
+#     def forward(self, state):
+#         return self.net(state)
+
+class ResidualBlock(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = nn.Linear(dim, dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(dim, dim)
+        
+    def forward(self, x):
+        identity = x
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        out += identity  # 残差连接
+        out = self.relu(out)
+        return out
+
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(state_dim, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 256),
-            nn.ReLU(),
-            nn.Linear(256, action_dim),
-            nn.Softmax(dim=-1)
+        self.input_layer = nn.Linear(state_dim, 256)
+        self.res_blocks = nn.Sequential(
+            ResidualBlock(256),
+            ResidualBlock(256),
+            ResidualBlock(256)
         )
-        self.to(device) 
+        self.output_layer = nn.Linear(256, action_dim)
+        self.softmax = nn.Softmax(dim=-1)
+        self.to(device)
         
     def forward(self, state):
-        return self.net(state)
+        x = F.relu(self.input_layer(state))
+        x = self.res_blocks(x)
+        x = self.output_layer(x)
+        return self.softmax(x)
 
 class Critic(nn.Module):
     def __init__(self, state_dim):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(state_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1))
-        self.to(device)  
-    
+        self.input_layer = nn.Linear(state_dim, 256)
+        self.res_blocks = nn.Sequential(
+            ResidualBlock(256),
+            ResidualBlock(256)
+        )
+        self.output_layer = nn.Linear(256, 1)
+        self.to(device)
+        
     def forward(self, state):
-        return self.net(state)
+        x = F.relu(self.input_layer(state))
+        x = self.res_blocks(x)
+        return self.output_layer(x)
+
 
 class PPO:
     def __init__(self, state_dim, action_dim):
@@ -239,11 +293,11 @@ def train_layer_group(bits=[3, 4, 5], layer_sizes=None, layer_groups=None, alpha
             agent.update()
         
         # 记录当前组的最优分配
-        allocations[group_name] = env.best_allocations
+        allocations[group_name] = [int(bit) for bit in env.best_allocations]
+        print(f"Best allocations for {group_name}:", allocations[group_name])
         
     # 更新全局最优
     best_overall_allocations = pack_list(allocations)
-    print("Best allocations for each group:", allocations)
     print("Best overall allocations:", best_overall_allocations)
 
     return best_overall_allocations
@@ -261,9 +315,10 @@ def train_all_layer(bits=[3, 4, 5], F=None, layer_sizes=None, alpha=1, R=0.25, o
             state = next_state
         agent.update()
     
-    print("Best allocations found:", env.best_allocations)
+    result = [int(bit) for bit in env.best_allocations]
+    print("Best allocations found:", result)
 
-    return env.best_allocations
+    return result
 
 if __name__ == "__main__":
     # 环境参数配置
@@ -287,7 +342,7 @@ if __name__ == "__main__":
     F = load_json('/root/autodl-tmp/methods/mix_quantize/model_info/llama2-7b/fisher_data.json')
     layer_sizes = load_json('/root/autodl-tmp/methods/mix_quantize/model_info/llama2-7b/LayersParams.json')
     N = len(F)  # 层数
-    sameLayerReset = False  # 是否使用同名层分配模式
+    sameLayerReset = True  # 是否使用同名层分配模式
     R = 0.28  # 压缩率
     alpha = 20  # 目标函数中的衰减系数
     _ = train(bits,F,layer_sizes,alpha,R,sameLayerReset)

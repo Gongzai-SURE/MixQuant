@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/llama-7b',  #qwen2-1.5b   llama2-7b llama2-13b qwen2.5-7b llama-7b
+        '--model', type=str,default = '/root/autodl-tmp/models/llama2-13b',  #qwen2-1.5b   llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -53,11 +53,11 @@ if __name__ == '__main__':
         help='Whether to load a ppl txt.'
     )
     parser.add_argument(
-        '--allocation', type=list, default=None,
+        '--allocation', type=str, default=None,
         help='The bit allocation for each layer.'
     )
     parser.add_argument(
-        '--wbits', type=list, default=[3,4,5],
+        '--wbits', type=str, default="3,4,5",
         help='The number of bits to use for weight quantization; at least one lower bits.'
     )
     parser.add_argument(
@@ -126,6 +126,10 @@ if __name__ == '__main__':
         help='Save quantized checkpoint under this name.'
     )
     parser.add_argument(
+        '--fake', action='store_true',
+        help='Whether to save fake quantized model.'
+    )
+    parser.add_argument(
         '--load', type=str, default='',
         help='Load fake quantized checkpoint.'
     )
@@ -189,9 +193,7 @@ if __name__ == '__main__':
         t_start = time.time()
         quantizers = layerwise_quantize(model, dataloader, args)
         if args.save_path:
-            save_model(model,quantizers,args.save_path)
-            tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
-            tokenizer.save_pretrained(args.save_path)
+            save_model(model, args.save_path, args.model, args.fake)
 
         t = round((time.time() - t_start),1)
         logger.info(f"Running Time : {t} s")
@@ -219,10 +221,5 @@ if __name__ == '__main__':
             t2 = time.time() - t1
             logger.info(f'{dataset} perplexity: {ppl_score}')
             logger.info(f"Evaluation time: {t2:.2f} seconds")
-    
-    
-    # saving model
-    if args.save_path:
-        save_model(model, quantizers, args.save_path, args.packing, args.fake)
 
     

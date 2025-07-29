@@ -68,6 +68,23 @@ class GreedyBitAllocation:
             return 1  # Under-compressed
         else:
             return 2  # Over-compressed
+
+    def initialize_allocation(self):
+        target = self.original_bit * self.R
+        base_bit = int(np.floor(target))
+        remainder = target - base_bit  
+        
+        n_up = int(round(remainder * self.layer_num))
+        n_up = max(0, min(n_up, self.layer_num))
+        
+        sorted_indices = np.argsort(self.fisher)[::-1]
+
+        allocation = [base_bit] * self.layer_num
+        for i in range(n_up):
+            current_bit = allocation[sorted_indices[i]]
+            allocation[sorted_indices[i]] = min(current_bit + 1, max(self.bits))
+
+        return np.array(allocation)
     
     def allocate(self):
         if self.sameLayerReset:
@@ -173,8 +190,7 @@ class GreedyBitAllocation:
         list: Optimized bit allocation
         """
         # Initialize all layers to closest available bit to target average
-        closest_bit = min(self.bits, key=lambda x: abs(x - self.original_bit*self.R))
-        bit_allocation = np.array([closest_bit] * self.layer_num)
+        bit_allocation = self.initialize_allocation()
         
         improved = True
         iteration = 0

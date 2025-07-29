@@ -20,12 +20,14 @@ class BayesianOptimization:
         self.best_trial = None
         self.study = optuna.create_study(directions=["minimize", "minimize"])
 
+
+
     def objective(self, trial):
         bit_allocation = [trial.suggest_categorical(f"bit_{i}", self.bits) for i in range(len(self.F))]
         bit_allocation = np.array(bit_allocation)
         
         # 目标1：敏感度加权和
-        objective_value = sum(F_i * (np.exp(-self.alpha * (bit_i/self.original_bit))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.original_bit))- math.exp(-self.alpha)) \
+        objective_value = sum(F_i * (np.exp(-self.alpha * (bit_i/self.B))- np.exp(-self.alpha)) / (np.exp(-self.alpha * (1.5/self.B))- np.exp(-self.alpha)) \
                            for F_i, bit_i in zip(self.F, bit_allocation))
         # objective_value = np.sum(self.F * np.exp(-self.alpha * (self.B / bit_allocation)))
         

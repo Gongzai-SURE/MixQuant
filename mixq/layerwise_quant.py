@@ -52,7 +52,7 @@ def layerwise_quantize(model, dataloader, args):
         if args.strategy == 'fisher':
             logger.info('Using fisher information strategy to quantize model.')
             layer_fisher(model, dataloader, args, allocation)
-            allocation.finetuning_allocation()
+            # allocation.finetuning_allocation()
             allocation_res = allocation.get_allocation_result()
         elif args.strategy == 'ppl':
             logger.info('Using perplexity strategy to quantize model.')
@@ -62,12 +62,6 @@ def layerwise_quantize(model, dataloader, args):
         elif args.strategy == 'threshold':
             logger.info('Using threshold strategy to quantize model.')
             allocation = layer_threshold(model, dataloader, args)
-        # elif args.strategy == 'activation':
-        #     logger.info('Using activation strategy to quantize model.')
-        #     allocation = layer_activation(model, dataloader, args)
-        # elif args.strategy == 'random':
-        #     logger.info('Using random strategy to quantize model.')
-        #     allocation = layer_random(model, dataloader, args)
         elif args.strategy is None:
             allocation_res = [int(args.target_bit)] * (len(layer_params)* len(layer_params[0]))
         else:
