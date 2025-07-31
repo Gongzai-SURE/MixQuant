@@ -122,5 +122,38 @@
         "attention_mask",
         "position_ids"
     ]
+    },
+"mistral": {
+    "map_layer": {
+        "q": "self_attn.q_proj",
+        "k": "self_attn.k_proj",
+        "v": "self_attn.v_proj",
+        "o": "self_attn.o_proj",
+        "up": "mlp.up_proj",
+        "gate": "mlp.gate_proj",
+        "down": "mlp.down_proj"
+    },
+    "sequential": [
+        ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj"],
+        ["self_attn.o_proj"],
+        ["mlp.up_proj", "mlp.gate_proj"],
+        ["mlp.down_proj"]
+    ],
+    "ln_layers": [
+        "input_layernorm",
+        "post_attention_layernorm"
+    ],
+    "layers": "model.model.layers",
+    "prefix": "model.layers",
+    "pre_layers": [
+        "model.model.embed_tokens"
+    ],
+    "post_layers": [
+        "model.model.norm"
+    ],
+    "inp_kwargs": [
+        "attention_mask",
+        "position_ids"
+    ]
     }
 }
