@@ -75,6 +75,9 @@ def layerwise_quantize(model, dataloader, args):
     elif args.quant_method == 'awq':
         logger.info('Using awq method to quantize model.')
         quantize_model_awq(model, args, allocation_res)
+    elif args.quant_method == 'omni':
+        logger.info('Using omni method to quantize model.')
+        quantize_model_omni(model, args, allocation_res,dataloader)
     return quantizers
 
 def layer_fisher(model, dataloader, args, allocation):
@@ -487,6 +490,66 @@ def quantize_model_nearest(model,args):
             subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
         layers[i] = layer.cpu()
         torch.cuda.empty_cache()
+
+def quantize_model_omni(model,args,allocation,dataloader):
+    from .omni.quantize.omniquant import omniquant
+    net_name = args.model.split('/')[-1]
+
+    # load the pth file of model
+    try:
+        print("Loading act_scales and act_shifts from omni directory...")
+        act_scales = torch.load(f'/root/autodl-tmp/methods/mix_quantize/mixq/omni/act_scales/{net_name}.pt')
+        act_shifts = torch.load(f'/root/autodl-tmp/methods/mix_quantize/mixq/omni/act_shifts/{net_name}.pt')
+    except FileNotFoundError:
+        print("act_scales or act_shifts not found, initializing to None.")
+        act_scales = None
+        act_shifts = None
+
+    args.weight_quant_params = {
+        "n_bits": 4,
+        "per_channel_axes": [0],
+        "symmetric": True,
+        "dynamic_method": "per_channel",
+        "group_size": 128,
+        "lwc": True,
+        "disable_zero_point": False
+    }
+    args.act_quant_params = {
+        "n_bits": 16,
+        "per_channel_axes": [],
+        "symmetric": False,
+        "dynamic_method": 'per_token',
+    }
+    args.q_quant_params = {
+        "n_bits": 16,
+        "per_channel_axes": [],
+        "symmetric": False,
+        "dynamic_method": 'per_token',
+    }
+    args.k_quant_params = {
+        "n_bits": 16,
+        "per_channel_axes": [],
+        "symmetric": False,
+        "dynamic_method": 'per_token',
+    }
+    args.v_quant_params = {
+        "n_bits": 16,
+        "per_channel_axes": [],
+        "symmetric": False,
+        "dynamic_method": 'per_token',
+    }
+    args.p_quant_params = {
+        "n_bits": 16,
+        "metric": "fix0to1",
+    }
+    args.batch_size = 1
+    print("=== start omni quantization ===")
+
+    omniquant(model,args=args,dataloader=dataloader,
+              act_scales=act_scales,
+              act_shifts=act_shifts,
+              allocation=allocation,
+              logger = logger)
 
 
 

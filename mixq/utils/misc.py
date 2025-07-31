@@ -244,6 +244,8 @@ def processing_arguments(args):
             args.percdamp = 1.0
     elif 'qwen' in args.model:
         meta = metas['qwen']
+    elif 'mistral' in args.model:
+        meta = metas['mistral']
     else:
         raise NotImplementedError(f"{args.model} model is not implemented.")
     

@@ -549,7 +549,8 @@ class AwqQuantizer:
     
     def move_embed(self, device: str):
         self.model.model.embed_tokens = self.model.model.embed_tokens.to(device)
-        self.model.model.rotary_emb = self.model.model.rotary_emb.to(device)
+        if self.model.model.__class__.__name__ != "MistralModel":
+            self.model.model.rotary_emb = self.model.model.rotary_emb.to(device)
 
     def get_layers_for_scaling(self, module, input_feat, module_kwargs):
         layers = []

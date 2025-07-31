@@ -10,15 +10,15 @@ from mixq.utils.misc import *
 from mixq.utils.datautils import *
 from mixq.utils.modelutils import *
 from evaluation.perplexity import *
-from evaluation.reason import *
 from evaluation.eval_wikitext import *
+from lm_eval import evaluator
 
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/llama2-13b',  #qwen2-1.5b   llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
+        '--model', type=str,default = '/root/autodl-tmp/models/llama2-7b',  #qwen2-1.5b mistral-7b  llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         help='The target bit of total quantization.'
     )
     parser.add_argument(
-        '--quant_method', type=str, default='awq', choices=['gptq', 'awq', 'owq', 'nearest'], 
+        '--quant_method', type=str, default='', choices=['gptq', 'awq', 'owq', 'nearest','omni'], 
         help='Choosing an appropriate quantification method.\
             Different methods have different processes in handling quantization parameters.'
     ) 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         help='The bits to calculate fisher info.'
     )
     parser.add_argument(
-        '--perturb_percentage', type=float, default=0.75,
+        '--perturb_percentage', type=float, default=0.1,
         help='The amplitude of the added perturbation is -1 to 1 times the original model weight.'
     )
     parser.add_argument(
@@ -202,11 +202,34 @@ if __name__ == '__main__':
 
     # evaluation reasoning
     if not args.no_eval and args.reasoning:
-        # reason_tasks = ['BoolQ','ARC-E','ARC-C','HellaSwag','WinoGrande']
+        results = {}
+        from evaluation.lm_model import HFModelWrapper
+        reason_tasks = ["boolq","arc_easy","arc_challenge","hellaswag","winogrande"]
+        # reason_tasks = ["arc_easy","arc_challenge"]#,
+        # reason_tasks = ["hellaswag","winogrande"]
         tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
-        scores = reason_test(model, tokenizer)
-        # 记录平均值
-        logger.info(f"average score: {np.mean(scores)}")
+        lm= HFModelWrapper(model, tokenizer)
+        t_results = evaluator.simple_evaluate(
+            lm,
+            tasks = reason_tasks,
+            num_fewshot=0,
+            limit=None,
+        )
+        results.update(t_results["results"])
+        logger.info(results)
+        try:
+            acc_values = [task_result["acc,none"] for task_result in results.values() if "acc,none" in task_result]
+            avg_acc = sum(acc_values) / len(acc_values)
+            logger.info(f"avg acc: {avg_acc:.4f}")
+        except Exception as e:
+            logger.error(f"Error calculating average accuracy: {e}")
+        del lm
+        # from evaluation.reason import *
+        # reason_tasks = ['BoolQ','ARC-E','ARC-C','HellaSwag','WinoGrande']
+        # tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
+        # scores = reason_test(model, tokenizer)
+        # # 记录平均值
+        # logger.info(f"average score: {np.mean(scores)}")
 
     # evaluation perplexity
     if not args.no_eval:

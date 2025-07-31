@@ -49,7 +49,7 @@ class BitAllocationEnv:
     def _get_state(self):
         state = torch.zeros(3 + self.n_layers * 2, device=device)
         state[0] = self.current_layer / self.n_layers
-        state[1] = self.used_budget / self.max_budget
+        state[1] = self.used_budget / self.max_budget 
         state[2:2+self.n_layers] = self.F / torch.max(self.F)
         state[3+self.n_layers:] = self.layer_sizes / torch.max(self.layer_sizes)
         return state
