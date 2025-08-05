@@ -135,7 +135,7 @@ def log_args(logger, args):
             "seed": args.seed,
         },
         "Evaluation": {
-            "no_eval": args.no_eval,
+            "evaluate_ppl": args.evaluate_ppl,
             "reasoning": args.reasoning
         }
     }
@@ -210,7 +210,16 @@ def processing_arguments(args):
         args.wbits = sorted(args.wbits)
     else:
         AssertionError('Please give wbits.')
-    
+
+    if args.test_bit:
+        if isinstance(args.test_bit, str):
+            args.test_bit = [int(w) for w in args.test_bit.split(',')]
+        elif isinstance(args.test_bit, list):
+            args.test_bit = [int(w) for w in args.test_bit]
+        else:
+            raise ValueError("test_wbits should be a string or a list of integers.")
+        args.test_bit = sorted(args.test_bit)
+
     if args.save_path:
         if not os.path.exists(os.path.dirname(args.save_path)):
             os.makedirs(os.path.dirname(args.save_path))

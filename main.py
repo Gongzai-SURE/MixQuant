@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--model', type=str,default = '/root/autodl-tmp/models/llama2-7b',  #qwen2-1.5b mistral-7b  llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
+        '--model', type=str,default = '/root/autodl-tmp/models/qwen2.5-14b',  #qwen2-1.5b mistral-7b  llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
         help='hugging face model to load'
     )
     parser.add_argument(
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         help='The ratio of the top layers to be considered for ppl allocation.'
     )
     parser.add_argument(
-        '--test_bit', type=list, default=[4],
+        '--test_bit', type=str, default="4",
         help='The bits to calculate fisher info.'
     )
     parser.add_argument(
@@ -138,7 +138,7 @@ if __name__ == '__main__':
         help='Logging file name'
     )
     parser.add_argument(
-        '--no_eval', action='store_true',
+        '--evaluate_ppl', action='store_true',
         help='Whether to evaluation model, adding parameters not to test.'
     )
     parser.add_argument(
@@ -200,8 +200,23 @@ if __name__ == '__main__':
     
     torch.cuda.empty_cache()
 
+    # evaluation perplexity
+    if args.evaluate_ppl:
+        ppl_tasks = ['wikitext2','ptb','c4'] 
+        for dataset in ppl_tasks:
+            testloader = get_loaders(
+                dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False, local_dir=args.dataset_dir
+            )  
+            t1 = time.time()
+            logger.info(f'Evaluating {dataset} sequence {args.seqlen} model_path {args.model}')
+            ppl_score = eval_ppl(model, testloader, args.device, args)
+            t2 = time.time() - t1
+            logger.info(f'{dataset} perplexity: {ppl_score}')
+            logger.info(f"Evaluation time: {t2:.2f} seconds")
+        model.to('cpu')
+
     # evaluation reasoning
-    if not args.no_eval and args.reasoning:
+    if args.reasoning:
         results = {}
         from evaluation.lm_model import HFModelWrapper
         reason_tasks = ["boolq","arc_easy","arc_challenge","hellaswag","winogrande"]
@@ -231,18 +246,6 @@ if __name__ == '__main__':
         # # 记录平均值
         # logger.info(f"average score: {np.mean(scores)}")
 
-    # evaluation perplexity
-    if not args.no_eval:
-        ppl_tasks = ['wikitext2','ptb','c4']
-        for dataset in ppl_tasks:
-            testloader = get_loaders(
-                dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False, local_dir=args.dataset_dir
-            )  
-            t1 = time.time()
-            logger.info(f'Evaluating {dataset} sequence {args.seqlen} model_path {args.model}')
-            ppl_score = eval_ppl(model, testloader, args.device, args)
-            t2 = time.time() - t1
-            logger.info(f'{dataset} perplexity: {ppl_score}')
-            logger.info(f"Evaluation time: {t2:.2f} seconds")
+    
 
     
