@@ -172,8 +172,10 @@ def get_loaders(
     if isinstance(tokenizer, LlamaTokenizer) and 'ptb' in name:
         tokenizer.tokens_trie.data = {}
 
-    if local_dir is not None:
+    if local_dir is not None and os.path.exists(local_dir):
         local_dir = local_dir + f"{name}"
+    else:
+        local_dir = None
     
     if 'wikitext2' in name:
         return get_wikitext2(nsamples, seed, seqlen, tokenizer, train,local_dir)

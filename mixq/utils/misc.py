@@ -162,7 +162,7 @@ def processing_arguments(args):
         logger.add(args.logfile, encoding="utf-8")
     else: # logging.在指定目录下生成日志文件
         model_name = args.model.split("/")[-1]
-        log_path = f'/root/autodl-tmp/methods/mix_quantize/logs/{model_name}'
+        log_path = f'mix_quantize/logs/{model_name}'
         Path(log_path).mkdir(parents=True, exist_ok=True)
         if args.original:
             logger_file_name = f'Original_{get_current_time()}'
@@ -226,9 +226,10 @@ def processing_arguments(args):
 
         # if not (args.save_path.endswith('.pth') or args.save_path.endswith('.pt')):
         #     raise ValueError("The save path '--args.save' must end in .pth or .pt.")
-    
-    
-    with open('/root/autodl-tmp/methods/mix_quantize/model_config.json') as f:
+
+    if not os.path.exists('mix_quantize/model_config.json'):
+        raise FileNotFoundError("model_config.json not found. Please ensure it is in the current directory.")
+    with open('mix_quantize/model_config.json') as f:
         metas = json.load(f)
 
     args.dtype = interpret_dtype(args.dtype)
@@ -279,9 +280,10 @@ def processing_arguments(args):
         meta['fisher'] = None
         meta['ppl'] = None
         try:
+            # 尝试加载本地 fisher_data 和 modified_perplexities 文件
             files = [
-                ('fisher', find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}', 'fisher_data')),
-                ('ppl', find_latest_file_by_keyword(f'/root/autodl-tmp/methods/mix_quantize/model_info/{model_name}', 'modified_perplexities'))
+                ('fisher', find_latest_file_by_keyword(f'mix_quantize/model_info/{model_name}', 'fisher_data')),
+                ('ppl', find_latest_file_by_keyword(f'mix_quantize/model_info/{model_name}', 'modified_perplexities'))
             ]
             for data_type, file_path in files:
                 if (data_type == 'fisher' and args.load_fisher) or (data_type == 'ppl' and args.load_ppl):

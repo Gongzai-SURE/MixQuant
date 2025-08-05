@@ -19,14 +19,14 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--model', type=str,default = '/root/autodl-tmp/models/qwen2.5-14b',  #qwen2-1.5b mistral-7b  llama2-7b llama2-13b qwen2.5-7b llama-7b llama-13b
-        help='hugging face model to load'
+        help='hugging face model to load or path to local model.'
     )
     parser.add_argument(
         '--dataset', type=str,default='wikitext2',
         help='Where to extract calibration data from. choices = [wikitext2, ptb, c4, custom_path]'
     )
     parser.add_argument(
-        '--dataset_dir', type=str, default='/root/autodl-tmp/datasets/',  # '/root/autodl-tmp/datasets/',
+        '--dataset_dir', type=str, default='',  # '/root/autodl-tmp/datasets/',
         help='load datasets from local directory.'
     )  
     parser.add_argument(
